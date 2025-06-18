@@ -1,128 +1,89 @@
 
-interface IPScoreLocation {
+interface IPScoreResponse {
   ip: string;
-  city: string;
-  region: string;
-  country: string;
-  isp: string;
-  org: string;
-  timezone: string;
-  lat: number;
-  lon: number;
-}
-
-interface IPScoreBlacklist {
-  ip: string;
-  blacklists: {
-    [key: string]: boolean;
+  status: boolean;
+  message?: string;
+  geoip1?: {
+    country: string;
+    countrycode: string;
+    region: string;
+    city: string;
+    zip: string;
+    lat: number;
+    lon: number;
+    timezone: string;
   };
-  isBlacklisted: boolean;
-  blacklistCount: number;
-}
-
-interface IPScoreFull extends IPScoreLocation {
-  blacklists: {
-    [key: string]: boolean;
+  geoip2?: {
+    country: string;
+    countrycode: string;
+    region: string;
+    city: string;
+    zip: string;
+    lat: number;
+    lon: number;
+    timezone: string;
   };
-  isBlacklisted: boolean;
-  blacklistCount: number;
+  blacklists?: {
+    [key: string]: string;
+  };
+  isp?: string;
+  org?: string;
+  asn?: string;
 }
 
 export class IPAnalysisService {
   private static readonly BASE_URL = 'https://ip-score.com';
 
-  // Get location and ISP for current IP
-  static async getCurrentIPInfo(): Promise<IPScoreLocation> {
-    try {
-      const response = await fetch(`${this.BASE_URL}/json`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch IP info');
-      }
-      return await response.json();
-    } catch (error) {
-      console.error('Error fetching current IP info:', error);
-      throw error;
-    }
-  }
-
-  // Get location and ISP for custom IP
-  static async getCustomIPInfo(ip: string): Promise<IPScoreLocation> {
-    try {
-      const formData = new FormData();
-      formData.append('ip', `"${ip}"`);
-      
-      const response = await fetch(`${this.BASE_URL}/json`, {
-        method: 'POST',
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch IP info');
-      }
-      return await response.json();
-    } catch (error) {
-      console.error('Error fetching custom IP info:', error);
-      throw error;
-    }
-  }
-
-  // Get blacklist info for current IP
-  static async getCurrentIPBlacklist(): Promise<IPScoreBlacklist> {
-    try {
-      const response = await fetch(`${this.BASE_URL}/spamjson`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch blacklist info');
-      }
-      const data = await response.json();
-      return {
-        ...data,
-        isBlacklisted: Object.values(data.blacklists || {}).some(Boolean),
-        blacklistCount: Object.values(data.blacklists || {}).filter(Boolean).length,
-      };
-    } catch (error) {
-      console.error('Error fetching current IP blacklist:', error);
-      throw error;
-    }
-  }
-
-  // Get blacklist info for custom IP
-  static async getCustomIPBlacklist(ip: string): Promise<IPScoreBlacklist> {
-    try {
-      const formData = new FormData();
-      formData.append('ip', `"${ip}"`);
-      
-      const response = await fetch(`${this.BASE_URL}/spamjson`, {
-        method: 'POST',
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch blacklist info');
-      }
-      const data = await response.json();
-      return {
-        ...data,
-        isBlacklisted: Object.values(data.blacklists || {}).some(Boolean),
-        blacklistCount: Object.values(data.blacklists || {}).filter(Boolean).length,
-      };
-    } catch (error) {
-      console.error('Error fetching custom IP blacklist:', error);
-      throw error;
-    }
-  }
-
   // Get full info (location + blacklist) for current IP
-  static async getCurrentIPFull(): Promise<IPScoreFull> {
+  static async getCurrentIPFull(): Promise<{
+    ip: string;
+    city: string;
+    region: string;
+    country: string;
+    isp: string;
+    org: string;
+    timezone: string;
+    lat: number;
+    lon: number;
+    isBlacklisted: boolean;
+    blacklistCount: number;
+    blacklists: { [key: string]: boolean };
+  }> {
     try {
       const response = await fetch(`${this.BASE_URL}/fulljson`);
       if (!response.ok) {
-        throw new Error('Failed to fetch full IP info');
+        throw new Error('Failed to fetch IP info');
       }
-      const data = await response.json();
+      const data: IPScoreResponse = await response.json();
+      
+      if (!data.status) {
+        throw new Error(data.message || 'API returned error status');
+      }
+
+      // Use geoip1 as primary, fallback to geoip2
+      const geo = data.geoip1 || data.geoip2 || {};
+      
+      // Process blacklists
+      const blacklists: { [key: string]: boolean } = {};
+      if (data.blacklists) {
+        Object.entries(data.blacklists).forEach(([key, value]) => {
+          blacklists[key] = value === 'listed';
+        });
+      }
+
       return {
-        ...data,
-        isBlacklisted: Object.values(data.blacklists || {}).some(Boolean),
-        blacklistCount: Object.values(data.blacklists || {}).filter(Boolean).length,
+        ip: data.ip,
+        city: geo.city || 'Unknown',
+        region: geo.region || 'Unknown',
+        country: geo.country || 'Unknown',
+        isp: data.isp || 'Unknown',
+        org: data.org || data.asn || 'Unknown',
+        timezone: geo.timezone || 'Unknown',
+        lat: geo.lat || 0,
+        lon: geo.lon || 0,
+        isBlacklisted: Object.values(blacklists).some(Boolean),
+        blacklistCount: Object.values(blacklists).filter(Boolean).length,
+        blacklists
       };
     } catch (error) {
       console.error('Error fetching current IP full info:', error);
@@ -131,10 +92,23 @@ export class IPAnalysisService {
   }
 
   // Get full info (location + blacklist) for custom IP
-  static async getCustomIPFull(ip: string): Promise<IPScoreFull> {
+  static async getCustomIPFull(ip: string): Promise<{
+    ip: string;
+    city: string;
+    region: string;
+    country: string;
+    isp: string;
+    org: string;
+    timezone: string;
+    lat: number;
+    lon: number;
+    isBlacklisted: boolean;
+    blacklistCount: number;
+    blacklists: { [key: string]: boolean };
+  }> {
     try {
       const formData = new FormData();
-      formData.append('ip', `"${ip}"`);
+      formData.append('ip', ip); // Remove quotes around IP
       
       const response = await fetch(`${this.BASE_URL}/fulljson`, {
         method: 'POST',
@@ -142,13 +116,39 @@ export class IPAnalysisService {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to fetch full IP info');
+        throw new Error('Failed to fetch IP info');
       }
-      const data = await response.json();
+      
+      const data: IPScoreResponse = await response.json();
+      
+      if (!data.status) {
+        throw new Error(data.message || 'IP invalid sau API error');
+      }
+
+      // Use geoip1 as primary, fallback to geoip2
+      const geo = data.geoip1 || data.geoip2 || {};
+      
+      // Process blacklists
+      const blacklists: { [key: string]: boolean } = {};
+      if (data.blacklists) {
+        Object.entries(data.blacklists).forEach(([key, value]) => {
+          blacklists[key] = value === 'listed';
+        });
+      }
+
       return {
-        ...data,
-        isBlacklisted: Object.values(data.blacklists || {}).some(Boolean),
-        blacklistCount: Object.values(data.blacklists || {}).filter(Boolean).length,
+        ip: data.ip,
+        city: geo.city || 'Unknown',
+        region: geo.region || 'Unknown',
+        country: geo.country || 'Unknown',
+        isp: data.isp || 'Unknown',
+        org: data.org || data.asn || 'Unknown',
+        timezone: geo.timezone || 'Unknown',
+        lat: geo.lat || 0,
+        lon: geo.lon || 0,
+        isBlacklisted: Object.values(blacklists).some(Boolean),
+        blacklistCount: Object.values(blacklists).filter(Boolean).length,
+        blacklists
       };
     } catch (error) {
       console.error('Error fetching custom IP full info:', error);

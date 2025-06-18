@@ -14,7 +14,10 @@ export const ISPCard = ({ ipInfo }: ISPCardProps) => {
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-white">
           <Wifi className="w-5 h-5 text-blue-400" />
-          Furnizor Internet
+          <span>Furnizor Internet</span>
+          <Badge variant="secondary" className="text-xs ml-2">
+            GEO
+          </Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -29,7 +32,7 @@ export const ISPCard = ({ ipInfo }: ISPCardProps) => {
         <div className="flex justify-between">
           <span className="text-gray-300">Status:</span>
           <Badge variant="secondary" className="text-xs">
-            Activ via IP-Score.com
+            Live via IP-Score.com
           </Badge>
         </div>
       </CardContent>

@@ -1,6 +1,7 @@
 
 import { MapPin } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { IPInfo } from '@/types/ip';
 
 interface LocationCardProps {
@@ -13,7 +14,10 @@ export const LocationCard = ({ ipInfo }: LocationCardProps) => {
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-white">
           <MapPin className="w-5 h-5 text-cyan-400" />
-          Localizare
+          <span>Localizare</span>
+          <Badge variant="secondary" className="text-xs ml-2">
+            GEO
+          </Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -24,6 +28,10 @@ export const LocationCard = ({ ipInfo }: LocationCardProps) => {
         <div className="flex justify-between">
           <span className="text-gray-300">Țară:</span>
           <span className="text-white">{ipInfo.country}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-300">Regiune:</span>
+          <span className="text-white">{ipInfo.region}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-gray-300">Oraș:</span>
