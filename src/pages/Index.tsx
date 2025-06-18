@@ -5,6 +5,7 @@ import { ISPCard } from '@/components/ISPCard';
 import { SecurityCard } from '@/components/SecurityCard';
 import { ToolsCard } from '@/components/ToolsCard';
 import { BlacklistCard } from '@/components/BlacklistCard';
+import { DNSLeakCard } from '@/components/DNSLeakCard';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useIPAnalysis } from '@/hooks/useIPAnalysis';
 
@@ -31,6 +32,7 @@ const Index = () => {
             <LocationCard ipInfo={ipInfo} />
             <ISPCard ipInfo={ipInfo} />
             <SecurityCard ipInfo={ipInfo} />
+            <DNSLeakCard ipInfo={ipInfo} />
             <ToolsCard />
             <BlacklistCard ipInfo={ipInfo} />
           </div>
