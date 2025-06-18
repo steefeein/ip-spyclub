@@ -4,6 +4,11 @@ export interface IPInfo {
   city: string;
   region: string;
   country: string;
+  // Secondary geo data from geoip2
+  citySecondary?: string;
+  regionSecondary?: string;
+  countrySecondary?: string;
+  zipSecondary?: string;
   isp: string;
   org: string;
   timezone: string;
@@ -16,4 +21,8 @@ export interface IPInfo {
   blacklists: { [key: string]: boolean };
   vpnDetected: boolean;
   proxyDetected: boolean;
+  // Additional details
+  userAgent?: string;
+  asn?: string;
+  zip?: string;
 }

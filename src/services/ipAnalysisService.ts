@@ -51,6 +51,10 @@ export class IPAnalysisService {
     city: string;
     region: string;
     country: string;
+    citySecondary?: string;
+    regionSecondary?: string;
+    countrySecondary?: string;
+    zipSecondary?: string;
     isp: string;
     org: string;
     timezone: string;
@@ -59,6 +63,9 @@ export class IPAnalysisService {
     isBlacklisted: boolean;
     blacklistCount: number;
     blacklists: { [key: string]: boolean };
+    userAgent?: string;
+    asn?: string;
+    zip?: string;
   }> {
     try {
       const response = await fetch(`${this.BASE_URL}/fulljson`);
@@ -71,8 +78,9 @@ export class IPAnalysisService {
         throw new Error(data.message || 'API returned error status');
       }
 
-      // Use geoip1 as primary, fallback to geoip2, with proper typing
-      const geo: GeoData = data.geoip1 || data.geoip2 || {};
+      // Use geoip1 as primary, geoip2 as secondary
+      const geo1: GeoData = data.geoip1 || {};
+      const geo2: GeoData = data.geoip2 || {};
       
       // Process blacklists
       const blacklists: { [key: string]: boolean } = {};
@@ -84,17 +92,24 @@ export class IPAnalysisService {
 
       return {
         ip: data.ip,
-        city: geo.city || 'Unknown',
-        region: geo.region || 'Unknown',
-        country: geo.country || 'Unknown',
+        city: geo1.city || 'Unknown',
+        region: geo1.region || 'Unknown',
+        country: geo1.country || 'Unknown',
+        citySecondary: geo2.city,
+        regionSecondary: geo2.region,
+        countrySecondary: geo2.country,
+        zipSecondary: geo2.zip,
         isp: data.isp || 'Unknown',
         org: data.org || data.asn || 'Unknown',
-        timezone: geo.timezone || 'Unknown',
-        lat: geo.lat || 0,
-        lon: geo.lon || 0,
+        timezone: geo1.timezone || geo2.timezone || 'Unknown',
+        lat: geo1.lat || geo2.lat || 0,
+        lon: geo1.lon || geo2.lon || 0,
         isBlacklisted: Object.values(blacklists).some(Boolean),
         blacklistCount: Object.values(blacklists).filter(Boolean).length,
-        blacklists
+        blacklists,
+        userAgent: (data as any).useragent,
+        asn: data.asn,
+        zip: geo1.zip
       };
     } catch (error) {
       console.error('Error fetching current IP full info:', error);
@@ -108,6 +123,10 @@ export class IPAnalysisService {
     city: string;
     region: string;
     country: string;
+    citySecondary?: string;
+    regionSecondary?: string;
+    countrySecondary?: string;
+    zipSecondary?: string;
     isp: string;
     org: string;
     timezone: string;
@@ -116,6 +135,9 @@ export class IPAnalysisService {
     isBlacklisted: boolean;
     blacklistCount: number;
     blacklists: { [key: string]: boolean };
+    userAgent?: string;
+    asn?: string;
+    zip?: string;
   }> {
     try {
       const formData = new FormData();
@@ -136,8 +158,9 @@ export class IPAnalysisService {
         throw new Error(data.message || 'IP invalid sau API error');
       }
 
-      // Use geoip1 as primary, fallback to geoip2, with proper typing
-      const geo: GeoData = data.geoip1 || data.geoip2 || {};
+      // Use geoip1 as primary, geoip2 as secondary
+      const geo1: GeoData = data.geoip1 || {};
+      const geo2: GeoData = data.geoip2 || {};
       
       // Process blacklists
       const blacklists: { [key: string]: boolean } = {};
@@ -149,17 +172,24 @@ export class IPAnalysisService {
 
       return {
         ip: data.ip,
-        city: geo.city || 'Unknown',
-        region: geo.region || 'Unknown',
-        country: geo.country || 'Unknown',
+        city: geo1.city || 'Unknown',
+        region: geo1.region || 'Unknown',
+        country: geo1.country || 'Unknown',
+        citySecondary: geo2.city,
+        regionSecondary: geo2.region,
+        countrySecondary: geo2.country,
+        zipSecondary: geo2.zip,
         isp: data.isp || 'Unknown',
         org: data.org || data.asn || 'Unknown',
-        timezone: geo.timezone || 'Unknown',
-        lat: geo.lat || 0,
-        lon: geo.lon || 0,
+        timezone: geo1.timezone || geo2.timezone || 'Unknown',
+        lat: geo1.lat || geo2.lat || 0,
+        lon: geo1.lon || geo2.lon || 0,
         isBlacklisted: Object.values(blacklists).some(Boolean),
         blacklistCount: Object.values(blacklists).filter(Boolean).length,
-        blacklists
+        blacklists,
+        userAgent: (data as any).useragent,
+        asn: data.asn,
+        zip: geo1.zip
       };
     } catch (error) {
       console.error('Error fetching custom IP full info:', error);

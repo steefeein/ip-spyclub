@@ -39,6 +39,10 @@ export const useIPAnalysis = () => {
         city: locationData.city || 'Unknown',
         region: locationData.region || 'Unknown',
         country: locationData.country || 'Unknown',
+        citySecondary: locationData.citySecondary,
+        regionSecondary: locationData.regionSecondary,
+        countrySecondary: locationData.countrySecondary,
+        zipSecondary: locationData.zipSecondary,
         isp: locationData.isp || 'Unknown',
         org: locationData.org || 'Unknown',
         timezone: locationData.timezone || 'Unknown',
@@ -51,6 +55,9 @@ export const useIPAnalysis = () => {
         blacklists: blacklistData.blacklists || {},
         vpnDetected: scamalyticsData.vpnDetected,
         proxyDetected: scamalyticsData.proxyDetected,
+        userAgent: locationData.userAgent,
+        asn: locationData.asn,
+        zip: locationData.zip,
       };
 
       setIPInfo(combinedInfo);
