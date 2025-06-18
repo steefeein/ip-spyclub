@@ -31,6 +31,17 @@ interface IPScoreResponse {
   asn?: string;
 }
 
+interface GeoData {
+  country?: string;
+  countrycode?: string;
+  region?: string;
+  city?: string;
+  zip?: string;
+  lat?: number;
+  lon?: number;
+  timezone?: string;
+}
+
 export class IPAnalysisService {
   private static readonly BASE_URL = 'https://ip-score.com';
 
@@ -60,8 +71,8 @@ export class IPAnalysisService {
         throw new Error(data.message || 'API returned error status');
       }
 
-      // Use geoip1 as primary, fallback to geoip2
-      const geo = data.geoip1 || data.geoip2 || {};
+      // Use geoip1 as primary, fallback to geoip2, with proper typing
+      const geo: GeoData = data.geoip1 || data.geoip2 || {};
       
       // Process blacklists
       const blacklists: { [key: string]: boolean } = {};
@@ -108,7 +119,7 @@ export class IPAnalysisService {
   }> {
     try {
       const formData = new FormData();
-      formData.append('ip', ip); // Remove quotes around IP
+      formData.append('ip', ip);
       
       const response = await fetch(`${this.BASE_URL}/fulljson`, {
         method: 'POST',
@@ -125,8 +136,8 @@ export class IPAnalysisService {
         throw new Error(data.message || 'IP invalid sau API error');
       }
 
-      // Use geoip1 as primary, fallback to geoip2
-      const geo = data.geoip1 || data.geoip2 || {};
+      // Use geoip1 as primary, fallback to geoip2, with proper typing
+      const geo: GeoData = data.geoip1 || data.geoip2 || {};
       
       // Process blacklists
       const blacklists: { [key: string]: boolean } = {};
