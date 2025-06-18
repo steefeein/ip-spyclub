@@ -23,15 +23,15 @@ export const BlacklistCard = ({ ipInfo }: BlacklistCardProps) => {
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="space-y-2">
+        <div className="space-y-1">
           {Object.entries(ipInfo.blacklists).map(([service, isListed]) => (
-            <div key={service} className="flex items-center justify-between p-2 bg-slate-700/40 rounded border border-slate-600/40">
-              <span className="text-slate-300 text-xs font-medium">{service}</span>
+            <div key={service} className="flex items-center justify-between text-xs">
+              <span className="text-slate-300 font-medium">{service}</span>
               <Badge 
                 variant={isListed ? "destructive" : "secondary"} 
                 className={`text-xs ${
                   isListed 
-                    ? 'bg-red-600/30 text-red-100 border-red-500/50' 
+                    ? 'bg-red-600/30 text-red-100 border-red-500/50 animate-pulse' 
                     : 'bg-green-600/30 text-green-100 border-green-500/50'
                 }`}
               >

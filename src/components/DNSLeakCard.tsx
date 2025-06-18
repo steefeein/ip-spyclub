@@ -101,7 +101,7 @@ export const DNSLeakCard = ({ ipInfo }: DNSLeakCardProps) => {
                 </div>
                 <Badge 
                   variant={testResult.leakDetected ? "destructive" : "secondary"} 
-                  className={testResult.leakDetected ? "bg-red-600/40 text-red-100 border-red-400/50" : "bg-green-600/40 text-green-100 border-green-400/50"}
+                  className={`${testResult.leakDetected ? "bg-red-600/40 text-red-100 border-red-400/50 animate-pulse" : "bg-green-600/40 text-green-100 border-green-400/50"}`}
                 >
                   {testResult.leakDetected ? '🔴 RISC DETECTAT' : '🟢 SECURIZAT'}
                 </Badge>
@@ -152,7 +152,60 @@ export const DNSLeakCard = ({ ipInfo }: DNSLeakCardProps) => {
               </div>
             </div>
 
-            {/* Comprehensive DNS Servers Table */}
+            {/* IP Information Summary - Moved up */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-slate-700/40 rounded-lg border border-slate-600/40 p-4">
+                <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-blue-400" />
+                  🌍 Informații IP Curent (GeoIP1)
+                </h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="text-slate-300">🌐 IP:</div>
+                  <div className="text-white font-mono">{ipInfo.query || ipInfo.ip}</div>
+                  <div className="text-slate-300">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Țară:</div>
+                  <div className="text-white">{ipInfo.country}</div>
+                  <div className="text-slate-300">🗺️ Regiune:</div>
+                  <div className="text-white">{ipInfo.region}</div>
+                  <div className="text-slate-300">🏙️ Oraș:</div>
+                  <div className="text-white">{ipInfo.city}</div>
+                  <div className="text-slate-300">🌐 ISP:</div>
+                  <div className="text-white">{ipInfo.isp}</div>
+                  <div className="text-slate-300">🔢 ASN:</div>
+                  <div className="text-white font-mono">{ipInfo.asn || 'N/A'}</div>
+                  <div className="text-slate-300">📍 Coordonate:</div>
+                  <div className="text-white font-mono">{ipInfo.lat?.toFixed(4)}, {ipInfo.lon?.toFixed(4)}</div>
+                  <div className="text-slate-300">🕒 Fus orar:</div>
+                  <div className="text-white">{ipInfo.timezone}</div>
+                </div>
+              </div>
+
+              <div className="bg-slate-700/40 rounded-lg border border-slate-600/40 p-4">
+                <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-green-400" />
+                  🌍 Informații Secundare (GeoIP2)
+                </h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="text-slate-300">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Țară:</div>
+                  <div className="text-white">{ipInfo.countrySecondary || ipInfo.country}</div>
+                  <div className="text-slate-300">🗺️ Regiune:</div>
+                  <div className="text-white">{ipInfo.regionSecondary || ipInfo.region}</div>
+                  <div className="text-slate-300">🏙️ Oraș:</div>
+                  <div className="text-white">{ipInfo.citySecondary || ipInfo.city}</div>
+                  <div className="text-slate-300">📮 Cod poștal:</div>
+                  <div className="text-white">{ipInfo.zipSecondary || ipInfo.zip || 'N/A'}</div>
+                  <div className="text-slate-300">🏢 Organizație:</div>
+                  <div className="text-white">{ipInfo.org}</div>
+                  <div className="text-slate-300">📱 Mobile:</div>
+                  <div className="text-white">{ipInfo.mobile ? 'Da' : 'Nu'}</div>
+                  <div className="text-slate-300">🔒 Proxy:</div>
+                  <div className="text-white">{ipInfo.proxy ? 'Da' : 'Nu'}</div>
+                  <div className="text-slate-300">🖥️ Hosting:</div>
+                  <div className="text-white">{ipInfo.hosting ? 'Da' : 'Nu'}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Comprehensive DNS Servers Table - Moved down */}
             <div className="bg-slate-700/40 rounded-lg border border-slate-600/40 p-4">
               <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                 <Server className="w-5 h-5 text-blue-400" />
@@ -215,59 +268,6 @@ export const DNSLeakCard = ({ ipInfo }: DNSLeakCardProps) => {
                   </TableBody>
                 </Table>
               </ScrollArea>
-            </div>
-
-            {/* IP Information Summary */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-slate-700/40 rounded-lg border border-slate-600/40 p-4">
-                <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
-                  <Globe className="w-4 h-4 text-blue-400" />
-                  🌍 Informații IP Curent (GeoIP1)
-                </h4>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="text-slate-300">🌐 IP:</div>
-                  <div className="text-white font-mono">{ipInfo.query || ipInfo.ip}</div>
-                  <div className="text-slate-300">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Țară:</div>
-                  <div className="text-white">{ipInfo.country}</div>
-                  <div className="text-slate-300">🗺️ Regiune:</div>
-                  <div className="text-white">{ipInfo.region}</div>
-                  <div className="text-slate-300">🏙️ Oraș:</div>
-                  <div className="text-white">{ipInfo.city}</div>
-                  <div className="text-slate-300">🌐 ISP:</div>
-                  <div className="text-white">{ipInfo.isp}</div>
-                  <div className="text-slate-300">🔢 ASN:</div>
-                  <div className="text-white font-mono">{ipInfo.asn || 'N/A'}</div>
-                  <div className="text-slate-300">📍 Coordonate:</div>
-                  <div className="text-white font-mono">{ipInfo.lat?.toFixed(4)}, {ipInfo.lon?.toFixed(4)}</div>
-                  <div className="text-slate-300">🕒 Fus orar:</div>
-                  <div className="text-white">{ipInfo.timezone}</div>
-                </div>
-              </div>
-
-              <div className="bg-slate-700/40 rounded-lg border border-slate-600/40 p-4">
-                <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
-                  <Globe className="w-4 h-4 text-green-400" />
-                  🌍 Informații Secundare (GeoIP2)
-                </h4>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="text-slate-300">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Țară:</div>
-                  <div className="text-white">{ipInfo.countrySecondary || ipInfo.country}</div>
-                  <div className="text-slate-300">🗺️ Regiune:</div>
-                  <div className="text-white">{ipInfo.regionSecondary || ipInfo.region}</div>
-                  <div className="text-slate-300">🏙️ Oraș:</div>
-                  <div className="text-white">{ipInfo.citySecondary || ipInfo.city}</div>
-                  <div className="text-slate-300">📮 Cod poștal:</div>
-                  <div className="text-white">{ipInfo.zipSecondary || ipInfo.zip || 'N/A'}</div>
-                  <div className="text-slate-300">🏢 Organizație:</div>
-                  <div className="text-white">{ipInfo.org}</div>
-                  <div className="text-slate-300">📱 Mobile:</div>
-                  <div className="text-white">{ipInfo.mobile ? 'Da' : 'Nu'}</div>
-                  <div className="text-slate-300">🔒 Proxy:</div>
-                  <div className="text-white">{ipInfo.proxy ? 'Da' : 'Nu'}</div>
-                  <div className="text-slate-300">🖥️ Hosting:</div>
-                  <div className="text-white">{ipInfo.hosting ? 'Da' : 'Nu'}</div>
-                </div>
-              </div>
             </div>
           </>
         ) : (

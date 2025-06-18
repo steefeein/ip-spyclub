@@ -1,5 +1,5 @@
 
-import { Globe, Clock, Monitor, Smartphone, Info, MapPin, Languages, Wifi } from 'lucide-react';
+import { Globe, Clock, Monitor, Smartphone, Info, MapPin, Languages, Wifi, Radio, Shield } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { IPInfo } from '@/types/ip';
@@ -26,12 +26,18 @@ export const BrowserAnalysisCard = ({ ipInfo }: BrowserAnalysisCardProps) => {
     
     // Get timezone info
     const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const clientTime = new Date().toLocaleString('ro-RO');
-    const timezoneOffset = new Date().getTimezoneOffset();
+    const clientTime = new Date();
+    const clientTimeString = clientTime.toLocaleString('ro-RO');
+    const timezoneOffset = clientTime.getTimezoneOffset();
+    const gmtOffset = `GMT${timezoneOffset <= 0 ? '+' : '-'}${Math.floor(Math.abs(timezoneOffset) / 60).toString().padStart(2, '0')}:${(Math.abs(timezoneOffset) % 60).toString().padStart(2, '0')}`;
+    const currentTimeHHMM = clientTime.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
     
     // Compare with IP timezone
     const ipTimezone = ipInfo.timezone;
     const timezoneMatch = clientTimezone === ipTimezone;
+    
+    // WebRTC Detection
+    const webRTCSupported = !!(window.RTCPeerConnection || (window as any).webkitRTCPeerConnection || (window as any).mozRTCPeerConnection);
     
     return {
       userAgent,
@@ -55,8 +61,14 @@ export const BrowserAnalysisCard = ({ ipInfo }: BrowserAnalysisCardProps) => {
         client: clientTimezone,
         ip: ipTimezone,
         match: timezoneMatch,
-        clientTime,
-        offset: timezoneOffset
+        clientTime: clientTimeString,
+        offset: timezoneOffset,
+        gmtOffset,
+        currentTime: currentTimeHHMM
+      },
+      webRTC: {
+        supported: webRTCSupported,
+        localIPs: [] // Will be populated by WebRTC detection
       }
     };
   };
@@ -126,7 +138,7 @@ export const BrowserAnalysisCard = ({ ipInfo }: BrowserAnalysisCardProps) => {
         <div className={`p-2 rounded-lg border ${
           browserInfo.timezone.match 
             ? 'bg-green-600/20 border-green-500/40' 
-            : 'bg-yellow-600/20 border-yellow-500/40'
+            : 'bg-yellow-600/20 border-yellow-500/40 animate-pulse'
         }`}>
           <div className="space-y-2 text-xs">
             <div className="flex justify-between items-center">
@@ -148,6 +160,13 @@ export const BrowserAnalysisCard = ({ ipInfo }: BrowserAnalysisCardProps) => {
                 {browserInfo.timezone.ip}
               </span>
             </div>
+
+            <div className="flex justify-between items-center">
+              <span className="text-slate-300">GMT & Timp:</span>
+              <span className="text-white font-mono text-xs bg-slate-600/30 px-2 py-0.5 rounded">
+                {browserInfo.timezone.gmtOffset} | {browserInfo.timezone.currentTime}
+              </span>
+            </div>
             
             <div className="flex justify-between items-center">
               <span className="text-slate-300">Concordanță:</span>
@@ -156,11 +175,43 @@ export const BrowserAnalysisCard = ({ ipInfo }: BrowserAnalysisCardProps) => {
                 className={`text-xs ${
                   browserInfo.timezone.match 
                     ? 'bg-green-600/30 text-green-100 border-green-500/50' 
-                    : 'bg-yellow-600/30 text-yellow-100 border-yellow-500/50'
+                    : 'bg-yellow-600/30 text-yellow-100 border-yellow-500/50 animate-pulse'
                 }`}
               >
                 {browserInfo.timezone.match ? '✅ Concordă' : '⚠️ Diferă'}
               </Badge>
+            </div>
+          </div>
+        </div>
+
+        {/* WebRTC Detection */}
+        <div className="p-2 bg-slate-700/40 rounded-lg border border-slate-600/40">
+          <div className="space-y-2 text-xs">
+            <div className="flex justify-between items-center">
+              <span className="text-slate-300 flex items-center gap-1">
+                <Radio className="w-3 h-3 text-slate-400" />
+                WebRTC:
+              </span>
+              <Badge 
+                variant={browserInfo.webRTC.supported ? "secondary" : "destructive"}
+                className={`text-xs ${
+                  browserInfo.webRTC.supported 
+                    ? 'bg-green-600/30 text-green-100 border-green-500/50' 
+                    : 'bg-red-600/30 text-red-100 border-red-500/50'
+                }`}
+              >
+                {browserInfo.webRTC.supported ? '🟢 Suportat' : '🔴 Nu'}
+              </Badge>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <span className="text-slate-300 flex items-center gap-1">
+                <Shield className="w-3 h-3 text-slate-400" />
+                Status WebRTC:
+              </span>
+              <span className="text-white font-medium bg-slate-600/30 px-2 py-0.5 rounded">
+                {browserInfo.webRTC.supported ? 'Activ' : 'Inactiv'}
+              </span>
             </div>
           </div>
         </div>
@@ -197,7 +248,7 @@ export const BrowserAnalysisCard = ({ ipInfo }: BrowserAnalysisCardProps) => {
                 className={`text-xs ${
                   browserInfo.onLine 
                     ? 'bg-green-600/30 text-green-100 border-green-500/50' 
-                    : 'bg-red-600/30 text-red-100 border-red-500/50'
+                    : '&red-600/30 text-red-100 border-red-500/50'
                 }`}
               >
                 {browserInfo.onLine ? '🟢 Da' : '🔴 Nu'}
