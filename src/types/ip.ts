@@ -1,5 +1,6 @@
 
 export interface IPInfo {
+  query: string; // Adding missing query property
   ip: string;
   city: string;
   region: string;
@@ -25,4 +26,7 @@ export interface IPInfo {
   userAgent?: string;
   asn?: string;
   zip?: string;
+  mobile?: boolean; // Adding missing mobile property
+  proxy?: boolean;  // Adding missing proxy property  
+  hosting?: boolean; // Adding missing hosting property
 }
