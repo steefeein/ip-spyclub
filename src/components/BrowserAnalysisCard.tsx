@@ -1,257 +1,221 @@
 
-import { Globe, Clock, Monitor, Smartphone, Info, MapPin, Languages, Wifi, Radio, Shield } from 'lucide-react';
+import { Monitor, Globe, Clock, Wifi, Shield, Eye } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { IPInfo } from '@/types/ip';
+import { useEffect, useState } from 'react';
 
 interface BrowserAnalysisCardProps {
   ipInfo: IPInfo;
 }
 
 export const BrowserAnalysisCard = ({ ipInfo }: BrowserAnalysisCardProps) => {
-  const getBrowserInfo = () => {
-    const userAgent = navigator.userAgent;
-    const platform = navigator.platform;
-    const language = navigator.language;
-    const languages = navigator.languages?.join(', ') || language;
-    const cookieEnabled = navigator.cookieEnabled;
-    const onLine = navigator.onLine;
-    const connection = (navigator as any).connection;
-    
-    // Get screen info
-    const screenWidth = screen.width;
-    const screenHeight = screen.height;
-    const colorDepth = screen.colorDepth;
-    const pixelDepth = screen.pixelDepth;
-    
-    // Get timezone info
-    const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const clientTime = new Date();
-    const clientTimeString = clientTime.toLocaleString('ro-RO');
-    const timezoneOffset = clientTime.getTimezoneOffset();
-    const gmtOffset = `GMT${timezoneOffset <= 0 ? '+' : '-'}${Math.floor(Math.abs(timezoneOffset) / 60).toString().padStart(2, '0')}:${(Math.abs(timezoneOffset) % 60).toString().padStart(2, '0')}`;
-    const currentTimeHHMM = clientTime.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
-    
-    // Compare with IP timezone
-    const ipTimezone = ipInfo.timezone;
-    const timezoneMatch = clientTimezone === ipTimezone;
-    
+  const [browserInfo, setBrowserInfo] = useState({
+    userAgent: '',
+    platform: '',
+    language: '',
+    screen: '',
+    timezone: '',
+    connection: '',
+    webrtc: 'Detectare...',
+    timezoneOffset: 0,
+    currentTime: ''
+  });
+
+  useEffect(() => {
+    const updateBrowserInfo = () => {
+      const now = new Date();
+      const timezoneOffset = now.getTimezoneOffset();
+      const gmtOffset = -timezoneOffset / 60;
+      const gmtString = `GMT${gmtOffset >= 0 ? '+' : ''}${gmtOffset}`;
+      const timeString = now.toLocaleTimeString('ro-RO', { 
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      setBrowserInfo({
+        userAgent: navigator.userAgent.split(' ')[0] || 'Unknown',
+        platform: navigator.platform || 'Unknown',
+        language: navigator.language || 'Unknown',
+        screen: `${screen.width}x${screen.height}`,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Unknown',
+        connection: (navigator as any).connection?.effectiveType || 'Unknown',
+        webrtc: 'Detectare...',
+        timezoneOffset,
+        currentTime: `${gmtString} ${timeString}`
+      });
+    };
+
+    updateBrowserInfo();
+    const interval = setInterval(updateBrowserInfo, 1000);
+
     // WebRTC Detection
-    const webRTCSupported = !!(window.RTCPeerConnection || (window as any).webkitRTCPeerConnection || (window as any).mozRTCPeerConnection);
-    
-    return {
-      userAgent,
-      platform,
-      language,
-      languages,
-      cookieEnabled,
-      onLine,
-      connection: connection ? {
-        effectiveType: connection.effectiveType,
-        downlink: connection.downlink,
-        rtt: connection.rtt
-      } : null,
-      screen: {
-        width: screenWidth,
-        height: screenHeight,
-        colorDepth,
-        pixelDepth
-      },
-      timezone: {
-        client: clientTimezone,
-        ip: ipTimezone,
-        match: timezoneMatch,
-        clientTime: clientTimeString,
-        offset: timezoneOffset,
-        gmtOffset,
-        currentTime: currentTimeHHMM
-      },
-      webRTC: {
-        supported: webRTCSupported,
-        localIPs: [] // Will be populated by WebRTC detection
+    const detectWebRTC = async () => {
+      try {
+        const pc = new RTCPeerConnection({
+          iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+        });
+        
+        pc.createDataChannel('');
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        
+        pc.onicecandidate = (event) => {
+          if (event.candidate && event.candidate.candidate.includes('srflx')) {
+            setBrowserInfo(prev => ({ ...prev, webrtc: 'Detectat' }));
+            pc.close();
+          }
+        };
+        
+        setTimeout(() => {
+          setBrowserInfo(prev => ({ ...prev, webrtc: 'Nu este detectat' }));
+          pc.close();
+        }, 3000);
+      } catch (error) {
+        setBrowserInfo(prev => ({ ...prev, webrtc: 'Blocat/Indisponibil' }));
       }
     };
+
+    detectWebRTC();
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const getTimezoneMatch = () => {
+    if (!ipInfo.timezone || !browserInfo.timezone) return 'Unknown';
+    return ipInfo.timezone.includes(browserInfo.timezone) || browserInfo.timezone.includes(ipInfo.timezone);
   };
 
-  const browserInfo = getBrowserInfo();
-
-  const getDeviceType = () => {
-    if (/Mobile|Android|iPhone|iPad/.test(browserInfo.userAgent)) {
-      return { type: 'Mobile', icon: Smartphone, color: 'text-blue-400' };
-    }
-    return { type: 'Desktop', icon: Monitor, color: 'text-green-400' };
-  };
-
-  const deviceInfo = getDeviceType();
+  const isWebRTCRisk = browserInfo.webrtc === 'Detectat';
 
   return (
-    <Card className="bg-slate-800/60 backdrop-blur-xl border-slate-600/50 hover:border-blue-400/50 transition-all duration-500 shadow-lg">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-white text-sm">
-          <div className="p-1.5 bg-blue-600/40 rounded-lg backdrop-blur-sm border border-blue-500/50">
-            <Globe className="w-4 h-4 text-blue-200" />
+    <Card className="bg-white/95 backdrop-blur-sm border-slate-300 hover:border-purple-400/70 transition-all duration-300 shadow-lg hover:shadow-purple-500/10 transform hover:-translate-y-0.5">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-slate-800 text-sm">
+          <div className="p-1.5 bg-purple-100 rounded-lg border border-purple-200">
+            <Monitor className="w-4 h-4 text-purple-600" />
           </div>
-          <span className="font-bold">🖥️ Analiză Browser</span>
-          <Badge variant="secondary" className="ml-auto bg-blue-600/30 text-blue-100 border-blue-500/50 text-xs">
+          <span className="text-sm font-bold">
+            🖥️ Analiză Browser
+          </span>
+          <Badge variant="secondary" className="ml-auto bg-purple-100 text-purple-700 border-purple-200 text-xs">
             Client
           </Badge>
         </CardTitle>
       </CardHeader>
       
-      <CardContent className="space-y-3 pt-0">
-        {/* Device & Platform */}
-        <div className="p-2 bg-slate-700/40 rounded-lg border border-slate-600/40">
+      <CardContent className="space-y-2 pt-0">
+        <div className="p-2 bg-slate-50 rounded-lg border border-slate-200">
           <div className="space-y-2 text-xs">
             <div className="flex justify-between items-center">
-              <span className="text-slate-300 flex items-center gap-1">
-                <deviceInfo.icon className={`w-3 h-3 ${deviceInfo.color}`} />
-                Dispozitiv:
+              <span className="text-slate-600 flex items-center gap-1 font-medium">
+                <Monitor className="w-3 h-3" />
+                Browser:
               </span>
-              <span className="text-white font-medium bg-slate-600/30 px-2 py-0.5 rounded">
-                {deviceInfo.type}
+              <span className="text-slate-800 font-semibold bg-white px-2 py-0.5 rounded border border-slate-200 text-right max-w-[120px] truncate">
+                {browserInfo.userAgent}
               </span>
             </div>
             
             <div className="flex justify-between items-center">
-              <span className="text-slate-300 flex items-center gap-1">
-                <Monitor className="w-3 h-3 text-slate-400" />
+              <span className="text-slate-600 flex items-center gap-1 font-medium">
+                <Shield className="w-3 h-3" />
                 Platformă:
               </span>
-              <span className="text-white font-medium bg-slate-600/30 px-2 py-0.5 rounded">
+              <span className="text-slate-800 font-semibold bg-white px-2 py-0.5 rounded border border-slate-200">
                 {browserInfo.platform}
               </span>
             </div>
             
             <div className="flex justify-between items-center">
-              <span className="text-slate-300 flex items-center gap-1">
-                <Info className="w-3 h-3 text-slate-400" />
-                Rezoluție:
-              </span>
-              <span className="text-white font-mono text-xs bg-slate-600/30 px-2 py-0.5 rounded">
-                {browserInfo.screen.width}x{browserInfo.screen.height}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Timezone Analysis */}
-        <div className={`p-2 rounded-lg border ${
-          browserInfo.timezone.match 
-            ? 'bg-green-600/20 border-green-500/40' 
-            : 'bg-yellow-600/20 border-yellow-500/40 animate-pulse'
-        }`}>
-          <div className="space-y-2 text-xs">
-            <div className="flex justify-between items-center">
-              <span className="text-slate-300 flex items-center gap-1">
-                <Clock className="w-3 h-3 text-slate-400" />
-                Fus Client:
-              </span>
-              <span className="text-white font-medium bg-slate-600/30 px-2 py-0.5 rounded">
-                {browserInfo.timezone.client}
-              </span>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <span className="text-slate-300 flex items-center gap-1">
-                <MapPin className="w-3 h-3 text-slate-400" />
-                Fus IP:
-              </span>
-              <span className="text-white font-medium bg-slate-600/30 px-2 py-0.5 rounded">
-                {browserInfo.timezone.ip}
-              </span>
-            </div>
-
-            <div className="flex justify-between items-center">
-              <span className="text-slate-300">GMT & Timp:</span>
-              <span className="text-white font-mono text-xs bg-slate-600/30 px-2 py-0.5 rounded">
-                {browserInfo.timezone.gmtOffset} | {browserInfo.timezone.currentTime}
-              </span>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <span className="text-slate-300">Concordanță:</span>
-              <Badge 
-                variant={browserInfo.timezone.match ? "secondary" : "destructive"}
-                className={`text-xs ${
-                  browserInfo.timezone.match 
-                    ? 'bg-green-600/30 text-green-100 border-green-500/50' 
-                    : 'bg-yellow-600/30 text-yellow-100 border-yellow-500/50 animate-pulse'
-                }`}
-              >
-                {browserInfo.timezone.match ? '✅ Concordă' : '⚠️ Diferă'}
-              </Badge>
-            </div>
-          </div>
-        </div>
-
-        {/* WebRTC Detection */}
-        <div className="p-2 bg-slate-700/40 rounded-lg border border-slate-600/40">
-          <div className="space-y-2 text-xs">
-            <div className="flex justify-between items-center">
-              <span className="text-slate-300 flex items-center gap-1">
-                <Radio className="w-3 h-3 text-slate-400" />
-                WebRTC:
-              </span>
-              <Badge 
-                variant={browserInfo.webRTC.supported ? "secondary" : "destructive"}
-                className={`text-xs ${
-                  browserInfo.webRTC.supported 
-                    ? 'bg-green-600/30 text-green-100 border-green-500/50' 
-                    : 'bg-red-600/30 text-red-100 border-red-500/50'
-                }`}
-              >
-                {browserInfo.webRTC.supported ? '🟢 Suportat' : '🔴 Nu'}
-              </Badge>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <span className="text-slate-300 flex items-center gap-1">
-                <Shield className="w-3 h-3 text-slate-400" />
-                Status WebRTC:
-              </span>
-              <span className="text-white font-medium bg-slate-600/30 px-2 py-0.5 rounded">
-                {browserInfo.webRTC.supported ? 'Activ' : 'Inactiv'}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Language & Connection */}
-        <div className="p-2 bg-slate-700/40 rounded-lg border border-slate-600/40">
-          <div className="space-y-2 text-xs">
-            <div className="flex justify-between items-center">
-              <span className="text-slate-300 flex items-center gap-1">
-                <Languages className="w-3 h-3 text-slate-400" />
+              <span className="text-slate-600 flex items-center gap-1 font-medium">
+                <Globe className="w-3 h-3" />
                 Limbă:
               </span>
-              <span className="text-white font-medium bg-slate-600/30 px-2 py-0.5 rounded">
+              <span className="text-slate-800 font-semibold bg-white px-2 py-0.5 rounded border border-slate-200">
                 {browserInfo.language}
               </span>
             </div>
-            
-            {browserInfo.connection && (
-              <div className="flex justify-between items-center">
-                <span className="text-slate-300 flex items-center gap-1">
-                  <Wifi className="w-3 h-3 text-slate-400" />
-                  Conexiune:
-                </span>
-                <span className="text-white font-medium bg-slate-600/30 px-2 py-0.5 rounded">
-                  {browserInfo.connection.effectiveType}
-                </span>
-              </div>
-            )}
-            
+
             <div className="flex justify-between items-center">
-              <span className="text-slate-300">Online:</span>
+              <span className="text-slate-600 flex items-center gap-1 font-medium">
+                <Eye className="w-3 h-3" />
+                Rezoluție:
+              </span>
+              <span className="text-slate-800 font-mono font-semibold bg-white px-2 py-0.5 rounded border border-slate-200">
+                {browserInfo.screen}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center">
+              <span className="text-slate-600 flex items-center gap-1 font-medium">
+                <Clock className="w-3 h-3" />
+                Fus orar:
+              </span>
+              <div className="text-right">
+                <div className="text-slate-800 font-semibold bg-white px-2 py-0.5 rounded border border-slate-200 text-xs">
+                  {browserInfo.currentTime}
+                </div>
+                <div className="text-xs text-slate-500 mt-0.5">
+                  {browserInfo.timezone}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center">
+              <span className="text-slate-600 flex items-center gap-1 font-medium">
+                <Shield className="w-3 h-3" />
+                Sincron IP:
+              </span>
               <Badge 
-                variant={browserInfo.onLine ? "secondary" : "destructive"}
+                className={`text-xs ${getTimezoneMatch() ? 'bg-green-100 text-green-700 border-green-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200 animate-pulse'}`}
+              >
+                {getTimezoneMatch() ? '✓ Sincronizat' : '⚠️ Diferit'}
+              </Badge>
+            </div>
+
+            <div className="flex justify-between items-center">
+              <span className="text-slate-600 flex items-center gap-1 font-medium">
+                <Wifi className="w-3 h-3" />
+                Conexiune:
+              </span>
+              <span className="text-slate-800 font-semibold bg-white px-2 py-0.5 rounded border border-slate-200 uppercase">
+                {browserInfo.connection}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center">
+              <span className="text-slate-600 flex items-center gap-1 font-medium">
+                <Shield className="w-3 h-3" />
+                WebRTC:
+              </span>
+              <Badge 
                 className={`text-xs ${
-                  browserInfo.onLine 
-                    ? 'bg-green-600/30 text-green-100 border-green-500/50' 
-                    : '&red-600/30 text-red-100 border-red-500/50'
+                  isWebRTCRisk 
+                    ? 'bg-red-100 text-red-700 border-red-200 animate-pulse' 
+                    : browserInfo.webrtc === 'Detectare...' 
+                      ? 'bg-blue-100 text-blue-700 border-blue-200' 
+                      : 'bg-green-100 text-green-700 border-green-200'
                 }`}
               >
-                {browserInfo.onLine ? '🟢 Da' : '🔴 Nu'}
+                {isWebRTCRisk ? '⚠️ ' : browserInfo.webrtc === 'Detectare...' ? '🔄 ' : '✓ '}
+                {browserInfo.webrtc}
+              </Badge>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-2 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="flex items-center justify-between">
+            <span className="text-blue-700 text-xs font-medium flex items-center gap-1">
+              <Monitor className="w-3 h-3" />
+              Analiză în timp real
+            </span>
+            <div className="flex items-center gap-1">
+              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-ping"></div>
+              <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-200 text-xs">
+                Active
               </Badge>
             </div>
           </div>

@@ -16,18 +16,8 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-10 left-10 text-6xl animate-bounce opacity-20">🌟</div>
-        <div className="absolute top-20 right-20 text-4xl animate-pulse opacity-30">🔥</div>
-        <div className="absolute bottom-20 left-20 text-5xl animate-spin opacity-25" style={{animationDuration: '3s'}}>⚡</div>
-        <div className="absolute bottom-10 right-10 text-3xl animate-bounce opacity-20" style={{animationDelay: '1s'}}>💎</div>
-        <div className="absolute top-1/2 left-1/4 text-2xl animate-pulse opacity-15">🚀</div>
-        <div className="absolute top-1/3 right-1/3 text-4xl animate-spin opacity-20" style={{animationDuration: '4s'}}>🌐</div>
-      </div>
-      
-      <div className="container mx-auto px-4 py-4 max-w-[2000px] relative z-10">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 relative">
+      <div className="container mx-auto px-4 py-6 max-w-[2000px] relative z-10">
         <SearchSection 
           currentIP={currentIP}
           onSearch={handleSearch}
