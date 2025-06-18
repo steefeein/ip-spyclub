@@ -1,10 +1,10 @@
 
-import { Shield, AlertTriangle, CheckCircle, XCircle, Server, Globe, MapPin, Clock, Info, Network } from 'lucide-react';
+import { Shield, AlertTriangle, CheckCircle, Server, MapPin, Network, Clock, Globe, Activity } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { TooltipProvider, TooltipTrigger, TooltipContent, Tooltip } from '@/components/ui/tooltip';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useDNSLeakTest } from '@/hooks/useDNSLeakTest';
 import { IPInfo } from '@/types/ip';
 
@@ -15,240 +15,271 @@ interface DNSLeakCardProps {
 export const DNSLeakCard = ({ ipInfo }: DNSLeakCardProps) => {
   const { testResult, isLoading, runTest } = useDNSLeakTest();
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'text-emerald-400';
-      case 'running': return 'text-yellow-400';
-      case 'error': return 'text-red-400';
-      default: return 'text-gray-400';
+  const getReliabilityColor = (reliability: string) => {
+    switch (reliability) {
+      case 'high': return 'bg-green-500/20 text-green-300 border-green-400/30';
+      case 'medium': return 'bg-yellow-500/20 text-yellow-300 border-yellow-400/30';
+      case 'low': return 'bg-red-500/20 text-red-300 border-red-400/30';
+      default: return 'bg-gray-500/20 text-gray-300 border-gray-400/30';
     }
   };
 
+  const getAllServers = () => {
+    if (!testResult) return [];
+    
+    const allServers = [...testResult.servers];
+    
+    // Add servers from additional sources
+    Object.values(testResult.additionalSources).forEach(sourceServers => {
+      sourceServers.forEach(server => {
+        if (!allServers.find(s => s.ip === server.ip)) {
+          allServers.push(server);
+        }
+      });
+    });
+    
+    return allServers;
+  };
+
   return (
-    <TooltipProvider>
-      <Card className="bg-gradient-to-br from-slate-800/40 via-slate-700/30 to-slate-800/40 backdrop-blur-xl border-slate-500/20 hover:border-purple-400/30 transition-all duration-500 shadow-2xl lg:col-span-2">
-        <CardHeader className="pb-2 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-pink-500/5 opacity-50"></div>
-          <div className="flex items-center justify-between relative z-10">
-            <CardTitle className="flex items-center gap-2 text-white text-base">
-              <div className="p-1.5 bg-purple-500/20 rounded-lg backdrop-blur-sm border border-purple-400/30">
-                <Network className="w-4 h-4 text-purple-400" />
+    <Card className="bg-gradient-to-br from-slate-800/40 via-slate-700/30 to-slate-800/40 backdrop-blur-xl border-slate-500/20 hover:border-purple-400/30 transition-all duration-500 shadow-2xl col-span-full">
+      <CardHeader className="pb-4 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-pink-500/5 opacity-50"></div>
+        <div className="flex items-center justify-between relative z-10">
+          <CardTitle className="flex items-center gap-3 text-white">
+            <div className="p-2 bg-purple-500/20 rounded-lg backdrop-blur-sm border border-purple-400/30">
+              <Network className="w-6 h-6 text-purple-400" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xl font-bold">DNS Leak Test - Analiza Completă</span>
+              <span className="text-sm text-purple-300 font-normal">Verificare detaliată a securității DNS cu date din multiple surse</span>
+            </div>
+          </CardTitle>
+          <div className="flex items-center gap-4">
+            {testResult && (
+              <div className="flex items-center gap-6 text-sm">
+                <div className="flex items-center gap-2">
+                  <Server className="w-4 h-4 text-blue-400" />
+                  <span className="text-gray-300">Servere: {testResult.testDetails.totalServers}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-green-400" />
+                  <span className="text-gray-300">Țări: {testResult.testDetails.uniqueCountries}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-yellow-400" />
+                  <span className="text-gray-300">Timp răspuns: {testResult.testDetails.averageResponseTime}ms</span>
+                </div>
               </div>
-              <div className="flex flex-col">
-                <span className="font-bold">DNS Leak Test</span>
-                <span className="text-xs text-purple-300 font-normal">Verificare securitate DNS</span>
-              </div>
-            </CardTitle>
+            )}
             <Button 
               onClick={runTest} 
               disabled={isLoading}
-              size="sm"
-              className="bg-purple-600 hover:bg-purple-700 text-white border-purple-500 text-xs px-2 py-1"
+              size="lg"
+              className="bg-purple-600 hover:bg-purple-700 text-white border-purple-500"
             >
-              {isLoading ? 'Testez...' : 'Test'}
+              {isLoading ? 'Testez DNS...' : 'Rulează Test Complet'}
             </Button>
           </div>
-        </CardHeader>
+        </div>
+      </CardHeader>
 
-        <CardContent className="space-y-3 pt-0">
-          <Tabs defaultValue="status" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 bg-slate-800/60 border border-slate-600/40 h-8">
-              <TabsTrigger 
-                value="status" 
-                className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-purple-300 hover:text-white transition-colors text-xs py-1"
-              >
-                Status
-              </TabsTrigger>
-              <TabsTrigger 
-                value="geoip1" 
-                className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-blue-300 hover:text-white transition-colors text-xs py-1"
-              >
-                GeoIP1
-              </TabsTrigger>
-              <TabsTrigger 
-                value="geoip2" 
-                className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-green-300 hover:text-white transition-colors text-xs py-1"
-              >
-                GeoIP2
-              </TabsTrigger>
-              <TabsTrigger 
-                value="servers" 
-                className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white text-cyan-300 hover:text-white transition-colors text-xs py-1"
-              >
-                DNS
-              </TabsTrigger>
-            </TabsList>
+      <CardContent className="space-y-4">
+        {testResult ? (
+          <>
+            {/* Status Overview */}
+            <div className="grid grid-cols-4 gap-4 mb-6">
+              <div className="p-4 bg-slate-700/40 rounded-lg border border-slate-600/30">
+                <div className="flex items-center gap-2 mb-2">
+                  {testResult.leakDetected ? (
+                    <AlertTriangle className="w-5 h-5 text-red-400" />
+                  ) : (
+                    <CheckCircle className="w-5 h-5 text-green-400" />
+                  )}
+                  <span className="text-white font-semibold">
+                    {testResult.leakDetected ? 'DNS Leak Detectat' : 'DNS Securizat'}
+                  </span>
+                </div>
+                <Badge 
+                  variant={testResult.leakDetected ? "destructive" : "secondary"} 
+                  className={testResult.leakDetected ? "bg-red-500/20 text-red-300 border-red-400/30" : "bg-green-500/20 text-green-300 border-green-400/30"}
+                >
+                  {testResult.leakDetected ? 'RISC DETECTAT' : 'SECURIZAT'}
+                </Badge>
+                <p className="text-xs text-gray-300 mt-2">{testResult.message}</p>
+              </div>
 
-            <TabsContent value="status" className="mt-2">
-              <div className="space-y-2">
-                {testResult ? (
-                  <>
-                    <div className="flex items-center justify-between p-2 bg-slate-700/40 rounded border border-slate-600/30">
-                      <div className="flex items-center gap-2">
-                        {testResult.leakDetected ? (
-                          <AlertTriangle className="w-4 h-4 text-red-400" />
-                        ) : (
-                          <CheckCircle className="w-4 h-4 text-green-400" />
-                        )}
-                        <span className="text-white font-medium text-sm">
-                          {testResult.leakDetected ? 'DNS Leak Detectat' : 'DNS Securizat'}
-                        </span>
-                      </div>
-                      <Badge 
-                        variant={testResult.leakDetected ? "destructive" : "secondary"} 
-                        className={`text-xs ${testResult.leakDetected ? "bg-red-500/20 text-red-300 border-red-400/30" : "bg-green-500/20 text-green-300 border-green-400/30"}`}
-                      >
-                        {testResult.leakDetected ? 'RISC' : 'SIGUR'}
-                      </Badge>
-                    </div>
-                    
-                    <div className="p-2 bg-slate-700/40 rounded border border-slate-600/30">
-                      <p className="text-xs text-gray-300">{testResult.message}</p>
-                    </div>
-
-                    {testResult.userLocation && (
-                      <div className="p-2 bg-slate-700/40 rounded border border-slate-600/30">
-                        <div className="flex items-center gap-2 mb-1">
-                          <MapPin className="w-3 h-3 text-blue-400" />
-                          <span className="text-xs font-medium text-white">Locația Ta</span>
-                        </div>
-                        <div className="text-xs text-gray-300 ml-5">
-                          <div>{testResult.userLocation.country}</div>
-                          <div>{testResult.userLocation.region}</div>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="text-center py-4">
-                    <Network className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-gray-400 text-xs">Apasă "Test" pentru verificarea DNS</p>
+              <div className="p-4 bg-slate-700/40 rounded-lg border border-slate-600/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <MapPin className="w-5 h-5 text-blue-400" />
+                  <span className="text-white font-semibold">Locația Ta</span>
+                </div>
+                {testResult.userLocation && (
+                  <div className="text-sm text-gray-300 space-y-1">
+                    <div>{testResult.userLocation.country}</div>
+                    <div>{testResult.userLocation.region}</div>
+                    <div>{testResult.userLocation.city}</div>
+                    <div className="text-xs text-purple-300">{testResult.userLocation.isp}</div>
                   </div>
                 )}
               </div>
-            </TabsContent>
 
-            <TabsContent value="geoip1" className="mt-2">
-              <div className="space-y-2">
+              <div className="p-4 bg-slate-700/40 rounded-lg border border-slate-600/30">
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                  <span className="text-blue-300 font-semibold text-xs">Sursa Primară (GeoIP1)</span>
+                  <Activity className="w-5 h-5 text-green-400" />
+                  <span className="text-white font-semibold">Statistici Test</span>
                 </div>
-                
-                <div className="grid grid-cols-3 gap-1 text-xs">
-                  <div className="p-1.5 bg-slate-700/40 rounded border border-slate-600/30">
-                    <div className="text-gray-400 text-xs">Țară</div>
-                    <div className="text-white font-medium text-xs">{ipInfo.country}</div>
-                  </div>
-                  <div className="p-1.5 bg-slate-700/40 rounded border border-slate-600/30">
-                    <div className="text-gray-400 text-xs">Regiune</div>
-                    <div className="text-white font-medium text-xs">{ipInfo.region}</div>
-                  </div>
-                  <div className="p-1.5 bg-slate-700/40 rounded border border-slate-600/30">
-                    <div className="text-gray-400 text-xs">Oraș</div>
-                    <div className="text-white font-medium text-xs">{ipInfo.city}</div>
-                  </div>
-                  <div className="p-1.5 bg-slate-700/40 rounded border border-slate-600/30">
-                    <div className="text-gray-400 text-xs">Cod Poștal</div>
-                    <div className="text-white font-medium text-xs">{ipInfo.zip || 'N/A'}</div>
-                  </div>
-                  <div className="p-1.5 bg-slate-700/40 rounded border border-slate-600/30">
-                    <div className="text-gray-400 text-xs">Lat</div>
-                    <div className="text-white font-medium text-xs font-mono">{ipInfo.lat.toFixed(3)}</div>
-                  </div>
-                  <div className="p-1.5 bg-slate-700/40 rounded border border-slate-600/30">
-                    <div className="text-gray-400 text-xs">Lon</div>
-                    <div className="text-white font-medium text-xs font-mono">{ipInfo.lon.toFixed(3)}</div>
-                  </div>
-                  <div className="p-1.5 bg-slate-700/40 rounded border border-slate-600/30 col-span-3">
-                    <div className="text-gray-400 text-xs">Fus Orar</div>
-                    <div className="text-white font-medium text-xs">{ipInfo.timezone}</div>
-                  </div>
+                <div className="text-sm text-gray-300 space-y-1">
+                  <div>Servere DNS: {testResult.testDetails.totalServers}</div>
+                  <div>Țări unice: {testResult.testDetails.uniqueCountries}</div>
+                  <div>ISP-uri: {testResult.testDetails.uniqueISPs}</div>
+                  <div>Durata: {Math.round(testResult.testDetails.testDuration/1000)}s</div>
                 </div>
               </div>
-            </TabsContent>
 
-            <TabsContent value="geoip2" className="mt-2">
-              <div className="space-y-2">
+              <div className="p-4 bg-slate-700/40 rounded-lg border border-slate-600/30">
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                  <span className="text-green-300 font-semibold text-xs">Sursa Secundară (GeoIP2)</span>
+                  <Clock className="w-5 h-5 text-yellow-400" />
+                  <span className="text-white font-semibold">Performance</span>
                 </div>
-                
-                <div className="grid grid-cols-3 gap-1 text-xs">
-                  <div className="p-1.5 bg-slate-700/40 rounded border border-slate-600/30">
-                    <div className="text-gray-400 text-xs">Țară</div>
-                    <div className="text-white font-medium text-xs">{ipInfo.countrySecondary || ipInfo.country}</div>
-                  </div>
-                  <div className="p-1.5 bg-slate-700/40 rounded border border-slate-600/30">
-                    <div className="text-gray-400 text-xs">Regiune</div>
-                    <div className="text-white font-medium text-xs">{ipInfo.regionSecondary || ipInfo.region}</div>
-                  </div>
-                  <div className="p-1.5 bg-slate-700/40 rounded border border-slate-600/30">
-                    <div className="text-gray-400 text-xs">Oraș</div>
-                    <div className="text-white font-medium text-xs">{ipInfo.citySecondary || ipInfo.city}</div>
-                  </div>
-                  <div className="p-1.5 bg-slate-700/40 rounded border border-slate-600/30">
-                    <div className="text-gray-400 text-xs">Cod Poștal</div>
-                    <div className="text-white font-medium text-xs">{ipInfo.zipSecondary || ipInfo.zip || 'N/A'}</div>
-                  </div>
-                  <div className="p-1.5 bg-slate-700/40 rounded border border-slate-600/30">
-                    <div className="text-gray-400 text-xs">ISP</div>
-                    <div className="text-white font-medium text-xs">{ipInfo.isp}</div>
-                  </div>
-                  <div className="p-1.5 bg-slate-700/40 rounded border border-slate-600/30">
-                    <div className="text-gray-400 text-xs">ASN</div>
-                    <div className="text-white font-medium text-xs font-mono">{ipInfo.asn || 'N/A'}</div>
-                  </div>
-                  <div className="p-1.5 bg-slate-700/40 rounded border border-slate-600/30 col-span-3">
-                    <div className="text-gray-400 text-xs">Organizație</div>
-                    <div className="text-white font-medium text-xs">{ipInfo.org}</div>
+                <div className="text-sm text-gray-300 space-y-1">
+                  <div>Timp mediu: {testResult.testDetails.averageResponseTime}ms</div>
+                  <div>Cel mai rapid: {Math.min(...getAllServers().map(s => s.responseTime || 999))}ms</div>
+                  <div>Cel mai lent: {Math.max(...getAllServers().map(s => s.responseTime || 0))}ms</div>
+                  <div className="text-xs text-purple-300">
+                    {new Date(testResult.testDetails.timestamp).toLocaleString('ro-RO')}
                   </div>
                 </div>
               </div>
-            </TabsContent>
+            </div>
 
-            <TabsContent value="servers" className="mt-2">
-              <div className="space-y-2">
-                {testResult && testResult.servers.length > 0 ? (
-                  testResult.servers.map((server, index) => (
-                    <div key={index} className="p-2 bg-slate-700/40 rounded border border-slate-600/30">
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2">
-                          <Server className="w-3 h-3 text-cyan-400" />
-                          <span className="text-white font-medium font-mono text-xs">{server.ip}</span>
-                        </div>
-                        <Badge variant="secondary" className="bg-cyan-500/20 text-cyan-300 border-cyan-400/30 text-xs">
-                          {server.type || 'resolver'}
-                        </Badge>
-                      </div>
-                      <div className="grid grid-cols-2 gap-1 text-xs ml-5">
-                        <div>
-                          <span className="text-gray-400">Host:</span>
-                          <div className="text-white text-xs">{server.hostname || 'N/A'}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-400">Țară:</span>
-                          <div className="text-white text-xs">{server.country || 'N/A'}</div>
-                        </div>
-                        <div className="col-span-2">
-                          <span className="text-gray-400">ISP:</span>
-                          <div className="text-white text-xs">{server.isp || 'N/A'}</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-3">
-                    <Server className="w-6 h-6 text-gray-400 mx-auto mb-1" />
-                    <p className="text-gray-400 text-xs">Nu sunt disponibile date despre serverele DNS</p>
-                  </div>
-                )}
+            {/* Comprehensive DNS Servers Table */}
+            <div className="bg-slate-700/30 rounded-lg border border-slate-600/30 p-4">
+              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                <Server className="w-5 h-5 text-cyan-400" />
+                Servere DNS Detectate - Analiza Completă
+              </h3>
+              
+              <ScrollArea className="h-[500px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-slate-600/30 hover:bg-slate-600/20">
+                      <TableHead className="text-cyan-300 font-semibold">IP Server</TableHead>
+                      <TableHead className="text-cyan-300 font-semibold">Hostname</TableHead>
+                      <TableHead className="text-cyan-300 font-semibold">Țară</TableHead>
+                      <TableHead className="text-cyan-300 font-semibold">Locație</TableHead>
+                      <TableHead className="text-cyan-300 font-semibold">ISP/Organizație</TableHead>
+                      <TableHead className="text-cyan-300 font-semibold">ASN</TableHead>
+                      <TableHead className="text-cyan-300 font-semibold">Tip</TableHead>
+                      <TableHead className="text-cyan-300 font-semibold">Protocol</TableHead>
+                      <TableHead className="text-cyan-300 font-semibold">Port</TableHead>
+                      <TableHead className="text-cyan-300 font-semibold">Timp Răspuns</TableHead>
+                      <TableHead className="text-cyan-300 font-semibold">Fiabilitate</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {getAllServers().map((server, index) => (
+                      <TableRow key={`${server.ip}-${index}`} className="border-slate-600/20 hover:bg-slate-600/10">
+                        <TableCell className="text-white font-mono text-sm font-semibold">{server.ip}</TableCell>
+                        <TableCell className="text-gray-300 text-sm">{server.hostname || 'N/A'}</TableCell>
+                        <TableCell className="text-gray-300 text-sm">{server.country || 'N/A'}</TableCell>
+                        <TableCell className="text-gray-300 text-sm">{server.location || 'N/A'}</TableCell>
+                        <TableCell className="text-gray-300 text-sm">
+                          <div>
+                            <div>{server.isp || 'N/A'}</div>
+                            {server.org && server.org !== server.isp && (
+                              <div className="text-xs text-purple-300">{server.org}</div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-gray-300 text-sm font-mono">{server.asn || 'N/A'}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="bg-blue-500/20 text-blue-300 border-blue-400/30 text-xs">
+                            {server.type || 'resolver'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-gray-300 text-sm">{server.protocol || 'UDP'}</TableCell>
+                        <TableCell className="text-gray-300 text-sm">{server.port || '53'}</TableCell>
+                        <TableCell className="text-gray-300 text-sm font-mono">
+                          {server.responseTime ? `${server.responseTime}ms` : 'N/A'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant="secondary" 
+                            className={`text-xs ${getReliabilityColor(server.reliability || 'medium')}`}
+                          >
+                            {server.reliability?.toUpperCase() || 'MEDIUM'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </div>
+
+            {/* IP Information Summary */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-slate-700/30 rounded-lg border border-slate-600/30 p-4">
+                <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-blue-400" />
+                  Informații IP Curent (GeoIP1)
+                </h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="text-gray-400">IP:</div>
+                  <div className="text-white font-mono">{ipInfo.query}</div>
+                  <div className="text-gray-400">Țară:</div>
+                  <div className="text-white">{ipInfo.country}</div>
+                  <div className="text-gray-400">Regiune:</div>
+                  <div className="text-white">{ipInfo.region}</div>
+                  <div className="text-gray-400">Oraș:</div>
+                  <div className="text-white">{ipInfo.city}</div>
+                  <div className="text-gray-400">ISP:</div>
+                  <div className="text-white">{ipInfo.isp}</div>
+                  <div className="text-gray-400">ASN:</div>
+                  <div className="text-white font-mono">{ipInfo.asn || 'N/A'}</div>
+                  <div className="text-gray-400">Coordonate:</div>
+                  <div className="text-white font-mono">{ipInfo.lat?.toFixed(4)}, {ipInfo.lon?.toFixed(4)}</div>
+                  <div className="text-gray-400">Fus orar:</div>
+                  <div className="text-white">{ipInfo.timezone}</div>
+                </div>
               </div>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
-    </TooltipProvider>
+
+              <div className="bg-slate-700/30 rounded-lg border border-slate-600/30 p-4">
+                <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-green-400" />
+                  Informații Secundare (GeoIP2)
+                </h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="text-gray-400">Țară:</div>
+                  <div className="text-white">{ipInfo.countrySecondary || ipInfo.country}</div>
+                  <div className="text-gray-400">Regiune:</div>
+                  <div className="text-white">{ipInfo.regionSecondary || ipInfo.region}</div>
+                  <div className="text-gray-400">Oraș:</div>
+                  <div className="text-white">{ipInfo.citySecondary || ipInfo.city}</div>
+                  <div className="text-gray-400">Cod poștal:</div>
+                  <div className="text-white">{ipInfo.zipSecondary || ipInfo.zip || 'N/A'}</div>
+                  <div className="text-gray-400">Organizație:</div>
+                  <div className="text-white">{ipInfo.org}</div>
+                  <div className="text-gray-400">Mobile:</div>
+                  <div className="text-white">{ipInfo.mobile ? 'Da' : 'Nu'}</div>
+                  <div className="text-gray-400">Proxy:</div>
+                  <div className="text-white">{ipInfo.proxy ? 'Da' : 'Nu'}</div>
+                  <div className="text-gray-400">Hosting:</div>
+                  <div className="text-white">{ipInfo.hosting ? 'Da' : 'Nu'}</div>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="text-center py-12">
+            <Network className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-xl text-gray-300 mb-2">Test DNS Neexecutat</h3>
+            <p className="text-gray-400 mb-4">Apasă butonul "Rulează Test Complet" pentru a începe analiza detaliată a serverelor DNS</p>
+            <p className="text-sm text-purple-300">Testul va analiza multiple surse DNS și va afișa rezultatele într-un tabel complet</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
