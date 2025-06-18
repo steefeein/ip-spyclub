@@ -10,19 +10,31 @@ interface BlacklistCardProps {
 
 export const BlacklistCard = ({ ipInfo }: BlacklistCardProps) => {
   return (
-    <Card className="bg-slate-800/30 backdrop-blur-sm border-slate-600 hover:bg-slate-800/40 transition-all duration-300 lg:col-span-2">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-white">
-          <AlertTriangle className="w-5 h-5 text-yellow-400" />
-          Verificare Blacklist (Live via IP-Score.com)
+    <Card className="bg-slate-800/60 backdrop-blur-xl border-slate-600/50 hover:border-yellow-400/50 transition-all duration-500 shadow-lg">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-white text-sm">
+          <div className="p-1.5 bg-yellow-600/40 rounded-lg backdrop-blur-sm border border-yellow-500/50">
+            <AlertTriangle className="w-4 h-4 text-yellow-200" />
+          </div>
+          <span className="font-bold">🛡️ Blacklist</span>
+          <Badge variant="secondary" className="ml-auto bg-yellow-600/30 text-yellow-100 border-yellow-500/50 text-xs">
+            Live
+          </Badge>
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <CardContent className="pt-0">
+        <div className="space-y-2">
           {Object.entries(ipInfo.blacklists).map(([service, isListed]) => (
-            <div key={service} className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
-              <span className="text-gray-300 text-sm">{service}</span>
-              <Badge variant={isListed ? "destructive" : "secondary"} className="text-xs">
+            <div key={service} className="flex items-center justify-between p-2 bg-slate-700/40 rounded border border-slate-600/40">
+              <span className="text-slate-300 text-xs font-medium">{service}</span>
+              <Badge 
+                variant={isListed ? "destructive" : "secondary"} 
+                className={`text-xs ${
+                  isListed 
+                    ? 'bg-red-600/30 text-red-100 border-red-500/50' 
+                    : 'bg-green-600/30 text-green-100 border-green-500/50'
+                }`}
+              >
                 {isListed ? (
                   <>
                     <XCircle className="w-3 h-3 mr-1" />
@@ -38,8 +50,8 @@ export const BlacklistCard = ({ ipInfo }: BlacklistCardProps) => {
             </div>
           ))}
           {Object.keys(ipInfo.blacklists).length === 0 && (
-            <div className="col-span-full text-center text-gray-400 py-4">
-              Nu sunt disponibile date despre blacklist pentru acest IP
+            <div className="text-center text-slate-400 py-3 text-xs">
+              Nu sunt disponibile date
             </div>
           )}
         </div>

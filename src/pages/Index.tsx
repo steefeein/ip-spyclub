@@ -2,7 +2,7 @@
 import { SearchSection } from '@/components/SearchSection';
 import { ISPCard } from '@/components/ISPCard';
 import { SecurityCard } from '@/components/SecurityCard';
-import { ToolsCard } from '@/components/ToolsCard';
+import { BrowserAnalysisCard } from '@/components/BrowserAnalysisCard';
 import { BlacklistCard } from '@/components/BlacklistCard';
 import { DNSLeakCard } from '@/components/DNSLeakCard';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -34,18 +34,18 @@ const Index = () => {
           loading={loading}
         />
 
-        {/* Compact Results Section */}
+        {/* Results Section */}
         {ipInfo && (
           <div className="space-y-4">
-            {/* Compact top cards */}
+            {/* Top section with compact cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
               <ISPCard ipInfo={ipInfo} />
               <SecurityCard ipInfo={ipInfo} />
-              <ToolsCard />
+              <BrowserAnalysisCard ipInfo={ipInfo} />
               <BlacklistCard ipInfo={ipInfo} />
             </div>
             
-            {/* DNS Leak Test - Full width */}
+            {/* DNS Leak Test - Full width positioned higher */}
             <div className="w-full">
               <DNSLeakCard ipInfo={ipInfo} />
             </div>

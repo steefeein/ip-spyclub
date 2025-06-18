@@ -35,6 +35,7 @@ export const useIPAnalysis = () => {
       }
 
       const combinedInfo: IPInfo = {
+        query: locationData.ip, // Add the missing query property
         ip: locationData.ip,
         city: locationData.city || 'Unknown',
         region: locationData.region || 'Unknown',
@@ -58,6 +59,9 @@ export const useIPAnalysis = () => {
         userAgent: locationData.userAgent,
         asn: locationData.asn,
         zip: locationData.zip,
+        mobile: locationData.mobile || false,
+        proxy: locationData.proxy || false,
+        hosting: locationData.hosting || false,
       };
 
       setIPInfo(combinedInfo);
