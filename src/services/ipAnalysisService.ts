@@ -31,6 +31,24 @@ interface IPScoreResponse {
   asn?: string;
 }
 
+interface ScamalyticsResponse {
+  ip: string;
+  score: number;
+  risk: string;
+  vpn: boolean;
+  proxy: boolean;
+  residential: boolean;
+  mobile: boolean;
+  datacenter: boolean;
+  country: string;
+  region: string;
+  city: string;
+  isp: string;
+  org: string;
+  asn: string;
+  timezone: string;
+}
+
 interface GeoData {
   country?: string;
   countrycode?: string;
@@ -44,6 +62,9 @@ interface GeoData {
 
 export class IPAnalysisService {
   private static readonly BASE_URL = 'https://ip-score.com';
+  private static readonly SCAMALYTICS_BASE_URL = 'https://api11.scamalytics.com/v3';
+  private static readonly SCAMALYTICS_USER = 'robbine991';
+  private static readonly SCAMALYTICS_API_KEY = '7a348dd1fdc92f06802c05e415a59d3e3e73c2c023bec98b0f666d69ec2eb5d5';
 
   // Get full info (location + blacklist) for current IP
   static async getCurrentIPFull(): Promise<{
@@ -197,22 +218,52 @@ export class IPAnalysisService {
     }
   }
 
-  // Placeholder for Scamalytics fraud analysis (when API key is available)
+  // Real Scamalytics fraud analysis
   static async getScamalyticsAnalysis(ip: string): Promise<{
     fraudScore: number;
     riskLevel: string;
     vpnDetected: boolean;
     proxyDetected: boolean;
   }> {
-    // This will be implemented when Scamalytics API key is approved
-    console.log('Scamalytics API integration pending approval');
-    
-    // Return mock data for now with a note that it's pending
-    return {
-      fraudScore: Math.floor(Math.random() * 30) + 5,
-      riskLevel: 'Pending Scamalytics API approval',
-      vpnDetected: Math.random() > 0.7,
-      proxyDetected: Math.random() > 0.8,
-    };
+    try {
+      const url = `${this.SCAMALYTICS_BASE_URL}/${this.SCAMALYTICS_USER}/?key=${this.SCAMALYTICS_API_KEY}&ip=${ip}`;
+      
+      console.log('Calling Scamalytics API for IP:', ip);
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`Scamalytics API error: ${response.status}`);
+      }
+      
+      const data: ScamalyticsResponse = await response.json();
+      
+      console.log('Scamalytics response:', data);
+      
+      // Map risk string to readable Romanian text
+      const getRiskLevel = (risk: string, score: number) => {
+        if (risk === 'very high' || score >= 75) return 'Risc foarte ridicat';
+        if (risk === 'high' || score >= 50) return 'Risc ridicat';
+        if (risk === 'medium' || score >= 25) return 'Risc moderat';
+        return 'Risc scăzut';
+      };
+
+      return {
+        fraudScore: data.score || 0,
+        riskLevel: getRiskLevel(data.risk, data.score),
+        vpnDetected: data.vpn || false,
+        proxyDetected: data.proxy || false,
+      };
+    } catch (error) {
+      console.error('Error fetching Scamalytics analysis:', error);
+      
+      // Return fallback data if API fails
+      return {
+        fraudScore: 0,
+        riskLevel: 'Eroare API Scamalytics',
+        vpnDetected: false,
+        proxyDetected: false,
+      };
+    }
   }
 }

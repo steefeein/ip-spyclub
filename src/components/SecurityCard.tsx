@@ -16,19 +16,14 @@ export const SecurityCard = ({ ipInfo }: SecurityCardProps) => {
     return 'text-red-700';
   };
 
-  const getFraudScoreText = (score: number) => {
-    if (score < 25) return 'Risc scăzut';
-    if (score < 50) return 'Risc moderat';
-    if (score < 75) return 'Risc ridicat';
-    return 'Risc foarte ridicat';
-  };
-
   const getFraudScoreBg = (score: number) => {
     if (score < 25) return 'bg-emerald-50 border-emerald-200';
     if (score < 50) return 'bg-amber-50 border-amber-200';
     if (score < 75) return 'bg-orange-50 border-orange-200';
     return 'bg-red-50 border-red-200';
   };
+
+  const isApiError = ipInfo.riskLevel.includes('Eroare API');
 
   return (
     <Card className="bg-white/95 backdrop-blur-sm border-slate-300 hover:border-red-400/70 transition-all duration-300 shadow-lg hover:shadow-red-500/10 transform hover:-translate-y-0.5">
@@ -40,6 +35,9 @@ export const SecurityCard = ({ ipInfo }: SecurityCardProps) => {
           <span className="text-sm font-bold">
             🛡️ Securitate
           </span>
+          <Badge variant="secondary" className="ml-auto bg-green-100 text-green-700 border-green-200 text-xs">
+            Live
+          </Badge>
         </CardTitle>
       </CardHeader>
       
@@ -53,7 +51,7 @@ export const SecurityCard = ({ ipInfo }: SecurityCardProps) => {
               {ipInfo.fraudScore}%
             </div>
             <div className={`text-xs ${getFraudScoreColor(ipInfo.fraudScore)}`}>
-              {getFraudScoreText(ipInfo.fraudScore)}
+              {ipInfo.riskLevel}
             </div>
           </div>
         </div>
@@ -94,9 +92,9 @@ export const SecurityCard = ({ ipInfo }: SecurityCardProps) => {
           </div>
         </div>
 
-        {ipInfo.riskLevel.includes('Pending') && (
-          <div className="text-xs text-amber-700 mt-1 p-2 bg-amber-50 rounded border border-amber-200 animate-pulse">
-            ⚠️ Scamalytics API în curs de aprobare
+        {isApiError && (
+          <div className="text-xs text-red-700 mt-1 p-2 bg-red-50 rounded border border-red-200 animate-pulse">
+            ⚠️ Eroare la conectarea cu Scamalytics API
           </div>
         )}
       </CardContent>
