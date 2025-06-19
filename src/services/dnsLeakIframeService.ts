@@ -15,7 +15,7 @@ export class DNSLeakIframeService {
     iframe.style.left = '-9999px';
     iframe.style.width = '1px';
     iframe.style.height = '1px';
-    iframe.sandbox = 'allow-scripts allow-same-origin';
+    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
     
     document.body.appendChild(iframe);
     return iframe;
@@ -199,7 +199,7 @@ export class DNSLeakIframeService {
 
     this.onServerDetected = onServerDetected;
 
-    return new Promise((resolve, reject) => {
+    this.testPromise = new Promise((resolve, reject) => {
       this.resolveTest = resolve;
       this.rejectTest = reject;
 
@@ -274,6 +274,8 @@ export class DNSLeakIframeService {
       this.rejectTest = null;
       this.onServerDetected = null;
     });
+
+    return this.testPromise;
   }
 
   private static cleanup() {
