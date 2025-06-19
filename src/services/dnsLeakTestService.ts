@@ -27,7 +27,11 @@ export class DNSLeakTestService {
           opendns: [],
           cloudflare: [],
           quad9: [],
-          google: []
+          google: [],
+          local: [],
+          public: [],
+          isp: [],
+          international: []
         }
       };
     }
