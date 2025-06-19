@@ -199,7 +199,7 @@ export class DNSLeakIframeService {
 
     this.onServerDetected = onServerDetected;
 
-    this.testPromise = new Promise((resolve, reject) => {
+    this.testPromise = new Promise<DNSLeakTestResult>((resolve, reject) => {
       this.resolveTest = resolve;
       this.rejectTest = reject;
 
@@ -266,7 +266,7 @@ export class DNSLeakIframeService {
       } catch (error) {
         console.error('💥 DNS leak test failed:', error);
         this.cleanup();
-        reject(error);
+        reject(error instanceof Error ? error : new Error('Unknown error'));
       }
     }).finally(() => {
       this.testPromise = null;
