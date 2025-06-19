@@ -1,3 +1,4 @@
+
 interface IPScoreResponse {
   ip: string;
   status: boolean;
@@ -238,7 +239,7 @@ export class IPAnalysisService {
     }
   }
 
-  // Real Scamalytics fraud analysis with detailed data
+  // CORS-safe Scamalytics analysis with fallback data
   static async getScamalyticsAnalysis(ip: string): Promise<{
     fraudScore: number;
     riskLevel: string;
@@ -253,12 +254,21 @@ export class IPAnalysisService {
     proxyType: string;
     blacklistSources: string[];
   }> {
+    console.log('🔍 Attempting Scamalytics API call for IP:', ip);
+    
     try {
+      // Try to make the request with a timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
       const url = `${this.SCAMALYTICS_BASE_URL}/${this.SCAMALYTICS_USER}/?key=${this.SCAMALYTICS_API_KEY}&ip=${ip}`;
       
-      console.log('Calling Scamalytics API for IP:', ip);
+      const response = await fetch(url, {
+        signal: controller.signal,
+        mode: 'cors'
+      });
       
-      const response = await fetch(url);
+      clearTimeout(timeoutId);
       
       if (!response.ok) {
         throw new Error(`Scamalytics API error: ${response.status}`);
@@ -266,7 +276,7 @@ export class IPAnalysisService {
       
       const data: ScamalyticsResponse = await response.json();
       
-      console.log('Scamalytics response:', data);
+      console.log('✅ Scamalytics response received:', data);
       
       // Map risk string to readable Romanian text
       const getRiskLevel = (risk: string, score: number) => {
@@ -313,21 +323,21 @@ export class IPAnalysisService {
         blacklistSources: blacklistSources,
       };
     } catch (error) {
-      console.error('Error fetching Scamalytics analysis:', error);
+      console.warn('⚠️ Scamalytics API blocked by CORS or failed:', error);
       
-      // Return fallback data if API fails
+      // Return safe fallback data with CORS notification
       return {
         fraudScore: 0,
-        riskLevel: 'Eroare API Scamalytics',
+        riskLevel: '🚫 CORS Blocat - Folosește Supabase',
         vpnDetected: false,
         proxyDetected: false,
         ispScore: 0,
-        ispRisk: 'Eroare API ISP',
+        ispRisk: '🚫 API Blocat',
         isDatacenter: false,
         isAppleRelay: false,
         isAmazonAws: false,
         isGoogle: false,
-        proxyType: 'Unknown',
+        proxyType: 'CORS Error',
         blacklistSources: [],
       };
     }

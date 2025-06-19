@@ -21,12 +21,14 @@ export const useIPAnalysis = () => {
 
       if (ip) {
         // For custom IP, get full data
+        console.log('🔍 Fetching data for custom IP:', ip);
         const fullData = await IPAnalysisService.getCustomIPFull(ip);
         locationData = fullData;
         blacklistData = fullData;
         scamalyticsData = await IPAnalysisService.getScamalyticsAnalysis(ip);
       } else {
         // For current IP, get full data
+        console.log('🔍 Fetching data for current IP');
         const fullData = await IPAnalysisService.getCurrentIPFull();
         locationData = fullData;
         blacklistData = fullData;
@@ -35,7 +37,7 @@ export const useIPAnalysis = () => {
       }
 
       const combinedInfo: IPInfo = {
-        query: locationData.ip, // Add the missing query property
+        query: locationData.ip,
         ip: locationData.ip,
         city: locationData.city || 'Unknown',
         region: locationData.region || 'Unknown',
@@ -75,14 +77,23 @@ export const useIPAnalysis = () => {
 
       setIPInfo(combinedInfo);
       
-      toast({
-        title: "Succes",
-        description: "Informațiile IP au fost încărcate cu succes",
-      });
+      // Show appropriate message based on whether Scamalytics data was retrieved
+      if (scamalyticsData.riskLevel.includes('CORS')) {
+        toast({
+          title: "⚠️ Parțial reușit",
+          description: "Informațiile IP au fost încărcate. API Scamalytics blocat de CORS - integrează Supabase pentru funcționalitate completă.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "✅ Succes",
+          description: "Informațiile IP au fost încărcate complet cu analiză Scamalytics",
+        });
+      }
     } catch (error) {
       console.error('Error fetching IP info:', error);
       toast({
-        title: "Eroare",
+        title: "❌ Eroare",
         description: "Nu s-au putut încărca informațiile IP. Verifică conexiunea și încearcă din nou.",
         variant: "destructive"
       });
