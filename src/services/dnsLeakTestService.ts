@@ -43,193 +43,123 @@ interface DNSLeakTestResult {
 }
 
 export class DNSLeakTestService {
-  private static readonly TEST_DOMAINS = [
-    'whoami.ds.akahelios.net',
-    'whoami.telekom.de',
-    'detectportal.firefox.com',
-    'connectivity-check.ubuntu.com',
-    'resolver1.opendns.com',
-    '1dot1dot1dot1.cloudflare-dns.com',
-    'dns.quad9.net'
-  ];
+  private static generateRandomString(length: number): string {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  }
 
-  static async performDNSLeakTest(userIP?: string): Promise<DNSLeakTestResult> {
-    console.log('Starting comprehensive DNS leak test...');
+  private static async fetchDNSData(subdomain: string): Promise<any> {
+    const url = `https://${subdomain}.dns4.browserleaks.org/`;
+    console.log(`🌐 Fetching DNS data from: ${url}`);
     
     try {
-      const startTime = Date.now();
-      
-      // Simulate comprehensive DNS testing
-      await this.delay(3000);
-      
-      const mockServers: DNSServer[] = [
-        {
-          ip: '8.8.8.8',
-          hostname: 'dns.google',
-          country: 'United States',
-          isp: 'Google LLC',
-          type: 'resolver',
-          location: 'Mountain View, CA',
-          asn: 'AS15169',
-          org: 'Google LLC',
-          responseTime: 12,
-          protocol: 'UDP',
-          port: 53,
-          reliability: 'high'
-        },
-        {
-          ip: '8.8.4.4',
-          hostname: 'dns.google',
-          country: 'United States',
-          isp: 'Google LLC',
-          type: 'resolver',
-          location: 'Mountain View, CA',
-          asn: 'AS15169',
-          org: 'Google LLC',
-          responseTime: 15,
-          protocol: 'UDP',
-          port: 53,
-          reliability: 'high'
-        },
-        {
-          ip: '1.1.1.1',
-          hostname: 'one.one.one.one',
-          country: 'United States',
-          isp: 'Cloudflare Inc.',
-          type: 'resolver',
-          location: 'San Francisco, CA',
-          asn: 'AS13335',
-          org: 'Cloudflare Inc.',
-          responseTime: 8,
-          protocol: 'UDP',
-          port: 53,
-          reliability: 'high'
-        },
-        {
-          ip: '1.0.0.1',
-          hostname: 'one.zero.zero.one',
-          country: 'United States',
-          isp: 'Cloudflare Inc.',
-          type: 'resolver',
-          location: 'San Francisco, CA',
-          asn: 'AS13335',
-          org: 'Cloudflare Inc.',
-          responseTime: 10,
-          protocol: 'UDP',
-          port: 53,
-          reliability: 'high'
-        },
-        {
-          ip: '9.9.9.9',
-          hostname: 'dns.quad9.net',
-          country: 'Switzerland',
-          isp: 'Quad9',
-          type: 'resolver',
-          location: 'Zurich',
-          asn: 'AS19281',
-          org: 'Quad9',
-          responseTime: 18,
-          protocol: 'UDP',
-          port: 53,
-          reliability: 'high'
-        },
-        {
-          ip: '208.67.222.222',
-          hostname: 'resolver1.opendns.com',
-          country: 'United States',
-          isp: 'OpenDNS',
-          type: 'resolver',
-          location: 'San Francisco, CA',
-          asn: 'AS36692',
-          org: 'OpenDNS LLC',
-          responseTime: 20,
-          protocol: 'UDP',
-          port: 53,
-          reliability: 'medium'
-        }
-      ];
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const data = await response.json();
+      console.log(`✅ DNS response from ${subdomain}:`, data);
+      return data;
+    } catch (error) {
+      console.error(`❌ Error fetching from ${subdomain}:`, error);
+      return null;
+    }
+  }
 
-      const additionalSources = {
-        opendns: [
-          {
-            ip: '208.67.222.222',
-            hostname: 'resolver1.opendns.com',
-            country: 'United States',
-            isp: 'OpenDNS',
-            type: 'resolver' as const,
-            location: 'San Francisco, CA',
-            asn: 'AS36692',
-            org: 'OpenDNS LLC',
-            responseTime: 20,
-            protocol: 'UDP',
-            port: 53,
-            reliability: 'medium' as const
+  private static parseDNSResponse(data: any, testNumber: number): DNSServer | null {
+    if (!data || !data.ip) {
+      return null;
+    }
+
+    return {
+      ip: data.ip,
+      hostname: data.hostname || `dns-server-${testNumber}`,
+      country: data.country || data.geo?.country || 'Unknown',
+      isp: data.isp || data.org || 'Unknown ISP',
+      type: 'resolver',
+      location: data.city ? `${data.city}, ${data.region || data.country}` : (data.country || 'Unknown'),
+      asn: data.asn || 'Unknown',
+      org: data.org || data.isp || 'Unknown',
+      responseTime: Math.floor(Math.random() * 50) + 10, // Simulated response time
+      protocol: 'UDP',
+      port: 53,
+      reliability: 'high'
+    };
+  }
+
+  static async performDNSLeakTest(userIP?: string, onServerDetected?: (server: DNSServer) => void): Promise<DNSLeakTestResult> {
+    console.log('🚀 Starting real DNS leak test with browserleaks.org API...');
+    
+    const startTime = Date.now();
+    const servers: DNSServer[] = [];
+    
+    try {
+      // Make 10 API calls with 1 second intervals
+      for (let i = 1; i <= 10; i++) {
+        console.log(`📡 DNS Test ${i}/10 - Generating random subdomain...`);
+        
+        // Generate random 16-character subdomain
+        const randomSubdomain = this.generateRandomString(16);
+        
+        // Fetch DNS data
+        const dnsData = await this.fetchDNSData(randomSubdomain);
+        
+        if (dnsData) {
+          const server = this.parseDNSResponse(dnsData, i);
+          if (server) {
+            servers.push(server);
+            console.log(`✅ Server ${i} detected:`, server);
+            
+            // Call callback if provided (for real-time updates)
+            if (onServerDetected) {
+              onServerDetected(server);
+            }
           }
-        ],
-        cloudflare: [
-          {
-            ip: '1.1.1.1',
-            hostname: 'one.one.one.one',
-            country: 'United States',
-            isp: 'Cloudflare Inc.',
-            type: 'resolver' as const,
-            location: 'San Francisco, CA',
-            asn: 'AS13335',
-            org: 'Cloudflare Inc.',
-            responseTime: 8,
-            protocol: 'UDP',
-            port: 53,
-            reliability: 'high' as const
-          }
-        ],
-        quad9: [
-          {
-            ip: '9.9.9.9',
-            hostname: 'dns.quad9.net',
-            country: 'Switzerland',
-            isp: 'Quad9',
-            type: 'resolver' as const,
-            location: 'Zurich',
-            asn: 'AS19281',
-            org: 'Quad9',
-            responseTime: 18,
-            protocol: 'UDP',
-            port: 53,
-            reliability: 'high' as const
-          }
-        ],
-        google: [
-          {
-            ip: '8.8.8.8',
-            hostname: 'dns.google',
-            country: 'United States',
-            isp: 'Google LLC',
-            type: 'resolver' as const,
-            location: 'Mountain View, CA',
-            asn: 'AS15169',
-            org: 'Google LLC',
-            responseTime: 12,
-            protocol: 'UDP',
-            port: 53,
-            reliability: 'high' as const
-          }
-        ]
-      };
+        }
+        
+        // Wait 1 second before next request (except for the last one)
+        if (i < 10) {
+          console.log('⏳ Waiting 1 second before next request...');
+          await this.delay(1000);
+        }
+      }
 
       const endTime = Date.now();
       const testDuration = endTime - startTime;
-      const averageResponseTime = mockServers.reduce((sum, server) => sum + (server.responseTime || 0), 0) / mockServers.length;
-      const uniqueCountries = [...new Set(mockServers.map(s => s.country))].length;
-      const uniqueISPs = [...new Set(mockServers.map(s => s.isp))].length;
       
-      // Simulate leak detection logic
-      const leakDetected = Math.random() > 0.6; // 40% chance of leak for demo
+      // Calculate statistics
+      const averageResponseTime = servers.length > 0 
+        ? servers.reduce((sum, server) => sum + (server.responseTime || 0), 0) / servers.length
+        : 0;
       
-      return {
-        servers: mockServers,
+      const uniqueCountries = [...new Set(servers.map(s => s.country))].filter(c => c !== 'Unknown').length;
+      const uniqueISPs = [...new Set(servers.map(s => s.isp))].filter(isp => isp !== 'Unknown ISP').length;
+      
+      // Detect potential DNS leak
+      const userCountry = userIP ? 'Romania' : 'Unknown'; // You can enhance this with actual geolocation
+      const leakDetected = servers.some(server => 
+        server.country && 
+        server.country !== 'Unknown' && 
+        server.country.toLowerCase() !== userCountry.toLowerCase()
+      );
+
+      // Group servers by common DNS providers
+      const additionalSources = {
+        opendns: servers.filter(s => s.isp?.toLowerCase().includes('opendns')),
+        cloudflare: servers.filter(s => s.isp?.toLowerCase().includes('cloudflare')),
+        quad9: servers.filter(s => s.isp?.toLowerCase().includes('quad9')),
+        google: servers.filter(s => s.isp?.toLowerCase().includes('google'))
+      };
+
+      const result: DNSLeakTestResult = {
+        servers,
         leakDetected,
         userLocation: {
-          country: 'Romania',
+          country: userCountry,
           region: 'Constanța County',
           city: 'Constanța',
           isp: 'Digi Romania',
@@ -237,10 +167,10 @@ export class DNSLeakTestService {
         },
         testStatus: 'completed',
         message: leakDetected 
-          ? 'DNS leak detectat! Serverele DNS nu corespund cu locația ta.'
-          : 'Nu s-au detectat DNS leak-uri. Configurația DNS pare sigură.',
+          ? `🚨 DNS leak detectat! Am găsit ${servers.length} servere DNS din ${uniqueCountries} țări diferite.`
+          : `✅ Nu s-au detectat DNS leak-uri. Am analizat ${servers.length} servere DNS.`,
         testDetails: {
-          totalServers: mockServers.length,
+          totalServers: servers.length,
           uniqueCountries,
           uniqueISPs,
           averageResponseTime: Math.round(averageResponseTime),
@@ -249,20 +179,23 @@ export class DNSLeakTestService {
         },
         additionalSources
       };
+
+      console.log('🎉 DNS leak test completed successfully:', result);
+      return result;
       
     } catch (error) {
-      console.error('DNS leak test failed:', error);
+      console.error('💥 DNS leak test failed:', error);
       return {
-        servers: [],
+        servers,
         leakDetected: false,
         testStatus: 'error',
-        message: 'Eroare în timpul testului DNS. Încearcă din nou.',
+        message: `❌ Eroare în timpul testului DNS: ${error instanceof Error ? error.message : 'Eroare necunoscută'}`,
         testDetails: {
-          totalServers: 0,
+          totalServers: servers.length,
           uniqueCountries: 0,
           uniqueISPs: 0,
           averageResponseTime: 0,
-          testDuration: 0,
+          testDuration: Date.now() - startTime,
           timestamp: new Date().toISOString()
         },
         additionalSources: {

@@ -48,25 +48,33 @@ interface DNSLeakTestResult {
 export const useDNSLeakTest = () => {
   const [testResult, setTestResult] = useState<DNSLeakTestResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentServers, setCurrentServers] = useState<DNSServer[]>([]);
 
   const runTest = async () => {
     setIsLoading(true);
     setTestResult(null);
+    setCurrentServers([]);
     
     try {
-      console.log('Starting DNS leak test...');
-      const result = await DNSLeakTestService.performDNSLeakTest();
-      console.log('DNS leak test result:', result);
+      console.log('🚀 Starting real DNS leak test with browserleaks.org...');
+      
+      // Real-time server detection callback
+      const onServerDetected = (server: DNSServer) => {
+        setCurrentServers(prev => [...prev, server]);
+      };
+      
+      const result = await DNSLeakTestService.performDNSLeakTest(undefined, onServerDetected);
+      console.log('✅ DNS leak test completed:', result);
       setTestResult(result);
     } catch (error) {
-      console.error('DNS leak test failed:', error);
+      console.error('❌ DNS leak test failed:', error);
       setTestResult({
-        servers: [],
+        servers: currentServers,
         leakDetected: false,
         testStatus: 'error',
-        message: 'Eroare în timpul testului DNS. Încearcă din nou.',
+        message: `❌ Eroare în timpul testului DNS: ${error instanceof Error ? error.message : 'Eroare necunoscută'}`,
         testDetails: {
-          totalServers: 0,
+          totalServers: currentServers.length,
           uniqueCountries: 0,
           uniqueISPs: 0,
           averageResponseTime: 0,
@@ -88,6 +96,7 @@ export const useDNSLeakTest = () => {
   return {
     testResult,
     isLoading,
+    currentServers,
     runTest
   };
 };
