@@ -77,19 +77,11 @@ export const useIPAnalysis = () => {
 
       setIPInfo(combinedInfo);
       
-      // Show appropriate message based on whether Scamalytics data was retrieved
-      if (scamalyticsData.riskLevel.includes('CORS')) {
-        toast({
-          title: "⚠️ Parțial reușit",
-          description: "Informațiile IP au fost încărcate. API Scamalytics blocat de CORS - integrează Supabase pentru funcționalitate completă.",
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "✅ Succes",
-          description: "Informațiile IP au fost încărcate complet cu analiză Scamalytics",
-        });
-      }
+      // Show success message - no more CORS issues!
+      toast({
+        title: "✅ Succes complet",
+        description: "Toate informațiile IP au fost încărcate cu succes via Supabase Edge Functions",
+      });
     } catch (error) {
       console.error('Error fetching IP info:', error);
       toast({

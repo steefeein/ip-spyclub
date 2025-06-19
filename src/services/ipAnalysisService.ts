@@ -31,45 +31,6 @@ interface IPScoreResponse {
   asn?: string;
 }
 
-interface ScamalyticsResponse {
-  scamalytics: {
-    status: string;
-    mode: string;
-    ip: string;
-    scamalytics_score: number;
-    scamalytics_risk: string;
-    scamalytics_isp_score: number;
-    scamalytics_isp_risk: string;
-    scamalytics_proxy: {
-      is_datacenter: boolean;
-      is_vpn: boolean;
-      is_apple_icloud_private_relay: boolean;
-      is_amazon_aws: boolean;
-      is_google: boolean;
-    };
-    is_blacklisted_external: boolean;
-  };
-  external_datasources: {
-    ip2proxy_lite?: {
-      proxy_type: string;
-      ip_blacklisted: boolean;
-      ip_blacklist_type: string;
-    };
-    ipsum?: {
-      ip_blacklisted: boolean;
-      num_blacklists: number;
-    };
-    spamhaus_drop?: {
-      ip_blacklisted: boolean;
-    };
-    x4bnet?: {
-      is_vpn: boolean;
-      is_datacenter: boolean;
-      is_blacklisted_spambot: boolean;
-    };
-  };
-}
-
 interface GeoData {
   country?: string;
   countrycode?: string;
@@ -83,9 +44,6 @@ interface GeoData {
 
 export class IPAnalysisService {
   private static readonly BASE_URL = 'https://ip-score.com';
-  private static readonly SCAMALYTICS_BASE_URL = 'https://api11.scamalytics.com/v3';
-  private static readonly SCAMALYTICS_USER = 'robbine991';
-  private static readonly SCAMALYTICS_API_KEY = '7a348dd1fdc92f06802c05e415a59d3e3e73c2c023bec98b0f666d69ec2eb5d5';
 
   // Get full info (location + blacklist) for current IP
   static async getCurrentIPFull(): Promise<{
@@ -239,7 +197,7 @@ export class IPAnalysisService {
     }
   }
 
-  // CORS-safe Scamalytics analysis with fallback data
+  // Now using Supabase Edge Function for Scamalytics analysis
   static async getScamalyticsAnalysis(ip: string): Promise<{
     fraudScore: number;
     riskLevel: string;
@@ -254,90 +212,44 @@ export class IPAnalysisService {
     proxyType: string;
     blacklistSources: string[];
   }> {
-    console.log('🔍 Attempting Scamalytics API call for IP:', ip);
+    console.log('🔍 Using Supabase Edge Function for Scamalytics analysis of IP:', ip);
     
     try {
-      // Try to make the request with a timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-      
-      const url = `${this.SCAMALYTICS_BASE_URL}/${this.SCAMALYTICS_USER}/?key=${this.SCAMALYTICS_API_KEY}&ip=${ip}`;
-      
-      const response = await fetch(url, {
-        signal: controller.signal,
-        mode: 'cors'
+      const response = await fetch(`https://vwkpyxqltwlzvkmeqjva.supabase.co/functions/v1/scamalytics-analysis`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3a3B5eHFsdHdsenZrbWVxanZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzNjQ0MjcsImV4cCI6MjA2NTk0MDQyN30.bH5i6a_5SYErD9vCRn8ZPlEK7F6wsd9TuI65v_9x6Jk`
+        },
+        body: JSON.stringify({ ip })
       });
-      
-      clearTimeout(timeoutId);
-      
+
       if (!response.ok) {
-        throw new Error(`Scamalytics API error: ${response.status}`);
-      }
-      
-      const data: ScamalyticsResponse = await response.json();
-      
-      console.log('✅ Scamalytics response received:', data);
-      
-      // Map risk string to readable Romanian text
-      const getRiskLevel = (risk: string, score: number) => {
-        if (risk === 'very high' || score >= 75) return 'Risc foarte ridicat';
-        if (risk === 'high' || score >= 50) return 'Risc ridicat';
-        if (risk === 'medium' || score >= 25) return 'Risc moderat';
-        return 'Risc scăzut';
-      };
-
-      const getIspRiskLevel = (risk: string, score: number) => {
-        if (risk === 'very high' || score >= 75) return 'ISP Risc foarte ridicat';
-        if (risk === 'high' || score >= 50) return 'ISP Risc ridicat';
-        if (risk === 'medium' || score >= 25) return 'ISP Risc moderat';
-        return 'ISP Risc scăzut';
-      };
-
-      // Collect blacklist sources
-      const blacklistSources = [];
-      if (data.external_datasources?.ipsum?.ip_blacklisted) {
-        blacklistSources.push('IPSum');
-      }
-      if (data.external_datasources?.spamhaus_drop?.ip_blacklisted) {
-        blacklistSources.push('Spamhaus');
-      }
-      if (data.external_datasources?.ip2proxy_lite?.ip_blacklisted) {
-        blacklistSources.push('IP2Proxy');
-      }
-      if (data.external_datasources?.x4bnet?.is_blacklisted_spambot) {
-        blacklistSources.push('X4BNet');
+        const errorText = await response.text();
+        throw new Error(`Edge Function error: ${response.status} - ${errorText}`);
       }
 
-      return {
-        fraudScore: data.scamalytics?.scamalytics_score || 0,
-        riskLevel: getRiskLevel(data.scamalytics?.scamalytics_risk, data.scamalytics?.scamalytics_score),
-        vpnDetected: data.scamalytics?.scamalytics_proxy?.is_vpn || false,
-        proxyDetected: data.scamalytics?.scamalytics_proxy?.is_datacenter || false,
-        ispScore: data.scamalytics?.scamalytics_isp_score || 0,
-        ispRisk: getIspRiskLevel(data.scamalytics?.scamalytics_isp_risk, data.scamalytics?.scamalytics_isp_score),
-        isDatacenter: data.scamalytics?.scamalytics_proxy?.is_datacenter || false,
-        isAppleRelay: data.scamalytics?.scamalytics_proxy?.is_apple_icloud_private_relay || false,
-        isAmazonAws: data.scamalytics?.scamalytics_proxy?.is_amazon_aws || false,
-        isGoogle: data.scamalytics?.scamalytics_proxy?.is_google || false,
-        proxyType: data.external_datasources?.ip2proxy_lite?.proxy_type || 'Unknown',
-        blacklistSources: blacklistSources,
-      };
+      const data = await response.json();
+      
+      console.log('✅ Scamalytics analysis completed successfully via Supabase');
+      
+      return data;
     } catch (error) {
-      console.warn('⚠️ Scamalytics API blocked by CORS or failed:', error);
+      console.error('⚠️ Supabase Edge Function failed, using fallback:', error);
       
-      // Return safe fallback data with CORS notification
+      // Return safe fallback data
       return {
         fraudScore: 0,
-        riskLevel: '🚫 CORS Blocat - Folosește Supabase',
+        riskLevel: '🚫 Eroare API - Verifică configurația Supabase',
         vpnDetected: false,
         proxyDetected: false,
         ispScore: 0,
-        ispRisk: '🚫 API Blocat',
+        ispRisk: '🚫 API Indisponibil',
         isDatacenter: false,
         isAppleRelay: false,
         isAmazonAws: false,
         isGoogle: false,
-        proxyType: 'CORS Error',
+        proxyType: 'API Error',
         blacklistSources: [],
       };
     }
