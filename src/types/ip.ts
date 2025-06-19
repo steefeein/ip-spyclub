@@ -29,4 +29,13 @@ export interface IPInfo {
   mobile?: boolean; // Adding missing mobile property
   proxy?: boolean;  // Adding missing proxy property  
   hosting?: boolean; // Adding missing hosting property
+  // New Scamalytics detailed fields
+  ispScore?: number;
+  ispRisk?: string;
+  isDatacenter?: boolean;
+  isAppleRelay?: boolean;
+  isAmazonAws?: boolean;
+  isGoogle?: boolean;
+  proxyType?: string;
+  blacklistSources?: string[];
 }

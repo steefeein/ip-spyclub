@@ -1,4 +1,3 @@
-
 interface IPScoreResponse {
   ip: string;
   status: boolean;
@@ -32,21 +31,42 @@ interface IPScoreResponse {
 }
 
 interface ScamalyticsResponse {
-  ip: string;
-  score: number;
-  risk: string;
-  vpn: boolean;
-  proxy: boolean;
-  residential: boolean;
-  mobile: boolean;
-  datacenter: boolean;
-  country: string;
-  region: string;
-  city: string;
-  isp: string;
-  org: string;
-  asn: string;
-  timezone: string;
+  scamalytics: {
+    status: string;
+    mode: string;
+    ip: string;
+    scamalytics_score: number;
+    scamalytics_risk: string;
+    scamalytics_isp_score: number;
+    scamalytics_isp_risk: string;
+    scamalytics_proxy: {
+      is_datacenter: boolean;
+      is_vpn: boolean;
+      is_apple_icloud_private_relay: boolean;
+      is_amazon_aws: boolean;
+      is_google: boolean;
+    };
+    is_blacklisted_external: boolean;
+  };
+  external_datasources: {
+    ip2proxy_lite?: {
+      proxy_type: string;
+      ip_blacklisted: boolean;
+      ip_blacklist_type: string;
+    };
+    ipsum?: {
+      ip_blacklisted: boolean;
+      num_blacklists: number;
+    };
+    spamhaus_drop?: {
+      ip_blacklisted: boolean;
+    };
+    x4bnet?: {
+      is_vpn: boolean;
+      is_datacenter: boolean;
+      is_blacklisted_spambot: boolean;
+    };
+  };
 }
 
 interface GeoData {
@@ -218,12 +238,20 @@ export class IPAnalysisService {
     }
   }
 
-  // Real Scamalytics fraud analysis
+  // Real Scamalytics fraud analysis with detailed data
   static async getScamalyticsAnalysis(ip: string): Promise<{
     fraudScore: number;
     riskLevel: string;
     vpnDetected: boolean;
     proxyDetected: boolean;
+    ispScore: number;
+    ispRisk: string;
+    isDatacenter: boolean;
+    isAppleRelay: boolean;
+    isAmazonAws: boolean;
+    isGoogle: boolean;
+    proxyType: string;
+    blacklistSources: string[];
   }> {
     try {
       const url = `${this.SCAMALYTICS_BASE_URL}/${this.SCAMALYTICS_USER}/?key=${this.SCAMALYTICS_API_KEY}&ip=${ip}`;
@@ -248,11 +276,41 @@ export class IPAnalysisService {
         return 'Risc scăzut';
       };
 
+      const getIspRiskLevel = (risk: string, score: number) => {
+        if (risk === 'very high' || score >= 75) return 'ISP Risc foarte ridicat';
+        if (risk === 'high' || score >= 50) return 'ISP Risc ridicat';
+        if (risk === 'medium' || score >= 25) return 'ISP Risc moderat';
+        return 'ISP Risc scăzut';
+      };
+
+      // Collect blacklist sources
+      const blacklistSources = [];
+      if (data.external_datasources?.ipsum?.ip_blacklisted) {
+        blacklistSources.push('IPSum');
+      }
+      if (data.external_datasources?.spamhaus_drop?.ip_blacklisted) {
+        blacklistSources.push('Spamhaus');
+      }
+      if (data.external_datasources?.ip2proxy_lite?.ip_blacklisted) {
+        blacklistSources.push('IP2Proxy');
+      }
+      if (data.external_datasources?.x4bnet?.is_blacklisted_spambot) {
+        blacklistSources.push('X4BNet');
+      }
+
       return {
-        fraudScore: data.score || 0,
-        riskLevel: getRiskLevel(data.risk, data.score),
-        vpnDetected: data.vpn || false,
-        proxyDetected: data.proxy || false,
+        fraudScore: data.scamalytics?.scamalytics_score || 0,
+        riskLevel: getRiskLevel(data.scamalytics?.scamalytics_risk, data.scamalytics?.scamalytics_score),
+        vpnDetected: data.scamalytics?.scamalytics_proxy?.is_vpn || false,
+        proxyDetected: data.scamalytics?.scamalytics_proxy?.is_datacenter || false,
+        ispScore: data.scamalytics?.scamalytics_isp_score || 0,
+        ispRisk: getIspRiskLevel(data.scamalytics?.scamalytics_isp_risk, data.scamalytics?.scamalytics_isp_score),
+        isDatacenter: data.scamalytics?.scamalytics_proxy?.is_datacenter || false,
+        isAppleRelay: data.scamalytics?.scamalytics_proxy?.is_apple_icloud_private_relay || false,
+        isAmazonAws: data.scamalytics?.scamalytics_proxy?.is_amazon_aws || false,
+        isGoogle: data.scamalytics?.scamalytics_proxy?.is_google || false,
+        proxyType: data.external_datasources?.ip2proxy_lite?.proxy_type || 'Unknown',
+        blacklistSources: blacklistSources,
       };
     } catch (error) {
       console.error('Error fetching Scamalytics analysis:', error);
@@ -263,6 +321,14 @@ export class IPAnalysisService {
         riskLevel: 'Eroare API Scamalytics',
         vpnDetected: false,
         proxyDetected: false,
+        ispScore: 0,
+        ispRisk: 'Eroare API ISP',
+        isDatacenter: false,
+        isAppleRelay: false,
+        isAmazonAws: false,
+        isGoogle: false,
+        proxyType: 'Unknown',
+        blacklistSources: [],
       };
     }
   }

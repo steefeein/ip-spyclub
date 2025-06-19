@@ -62,6 +62,15 @@ export const useIPAnalysis = () => {
         mobile: locationData.mobile || false,
         proxy: locationData.proxy || false,
         hosting: locationData.hosting || false,
+        // New Scamalytics detailed fields
+        ispScore: scamalyticsData.ispScore,
+        ispRisk: scamalyticsData.ispRisk,
+        isDatacenter: scamalyticsData.isDatacenter,
+        isAppleRelay: scamalyticsData.isAppleRelay,
+        isAmazonAws: scamalyticsData.isAmazonAws,
+        isGoogle: scamalyticsData.isGoogle,
+        proxyType: scamalyticsData.proxyType,
+        blacklistSources: scamalyticsData.blacklistSources,
       };
 
       setIPInfo(combinedInfo);
