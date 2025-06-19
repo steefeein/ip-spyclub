@@ -52,88 +52,41 @@ export class DNSLeakTestService {
     return result;
   }
 
-  private static async fetchDNSData(testNumber: number): Promise<any> {
+  private static async fetchDNSData(testNumber: number, isIPv6: boolean = false): Promise<any> {
     // Generăm un nou subdomain random pentru fiecare request
     const randomSubdomain = this.generateRandomString(16);
-    const url = `https://${randomSubdomain}.dns4.browserleaks.org/`;
+    const apiType = isIPv6 ? 'dns6' : 'dns4';
+    const url = `https://${randomSubdomain}.${apiType}.browserleaks.org/`;
     
-    console.log(`🌐 Test ${testNumber}/10 - Fetching DNS data from: ${url}`);
+    console.log(`🌐 Test ${testNumber}/4 (${isIPv6 ? 'IPv6' : 'IPv4'}) - Fetching DNS data from: ${url}`);
     
     try {
-      // Încercăm să facem request-ul direct cu mode no-cors pentru a evita CORS
+      // Încercăm să facem request-ul direct
       const response = await fetch(url, {
         method: 'GET',
-        mode: 'no-cors', // Schimbăm la no-cors pentru a evita CORS errors
         headers: {
           'Accept': 'application/json, text/plain, */*',
+          'Cache-Control': 'no-cache',
         }
       });
       
       console.log(`📡 Response status for test ${testNumber}:`, response.status, response.type);
       
-      // Cu no-cors, nu putem citi response-ul, așa că folosim simulare
-      if (response.type === 'opaque') {
-        console.log(`🔄 Using simulated data for test ${testNumber} due to CORS restrictions`);
-        return this.generateSimulatedDNSData();
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`✅ Real DNS response from test ${testNumber} (${isIPv6 ? 'IPv6' : 'IPv4'}):`, data);
+        return data;
+      } else {
+        console.warn(`⚠️ API returned status ${response.status} for test ${testNumber}`);
+        return null;
       }
-      
-      const data = await response.json();
-      console.log(`✅ Real DNS response from test ${testNumber}:`, data);
-      return data;
     } catch (error) {
       console.error(`❌ Error fetching DNS data for test ${testNumber}:`, error);
-      
-      // În caz de eroare, returnăm date simulate
-      console.log(`🔄 Using simulated data for test ${testNumber} due to error:`, error.message);
-      return this.generateSimulatedDNSData();
+      return null;
     }
   }
 
-  private static generateSimulatedDNSData(): any {
-    // Simulăm date bazate pe formatul real din API
-    const simulatedResponses = [
-      {
-        "172.217.33.154": ["de", "Germany, Frankfurt am Main", "Google LLC"],
-        "172.217.33.155": ["de", "Germany, Frankfurt am Main", "Google LLC"]
-      },
-      {
-        "8.8.8.8": ["us", "United States, Mountain View", "Google LLC"]
-      },
-      {
-        "1.1.1.1": ["us", "United States, San Francisco", "Cloudflare Inc"],
-        "1.0.0.1": ["us", "United States, San Francisco", "Cloudflare Inc"]
-      },
-      {
-        "208.67.222.222": ["us", "United States, San Francisco", "OpenDNS LLC"],
-        "208.67.220.220": ["us", "United States, San Francisco", "OpenDNS LLC"]
-      },
-      {
-        "9.9.9.9": ["us", "United States, Berkeley", "Quad9"]
-      },
-      {
-        "185.228.168.9": ["ch", "Switzerland, Zurich", "CleanBrowsing"]
-      },
-      {
-        "76.76.19.19": ["us", "United States, Atlanta", "Alternate DNS"]
-      },
-      {
-        "94.140.14.14": ["cz", "Czech Republic, Prague", "AdGuard DNS"]
-      },
-      {
-        "8.26.56.26": ["us", "United States, Comodo Secure DNS", "Comodo"]
-      },
-      {
-        "77.88.8.8": ["ru", "Russia, Moscow", "Yandex DNS"]
-      }
-    ];
-    
-    // Selectăm un răspuns random
-    const randomResponse = simulatedResponses[Math.floor(Math.random() * simulatedResponses.length)];
-    console.log(`🎲 Generated simulated DNS data:`, randomResponse);
-    return randomResponse;
-  }
-
-  private static parseDNSResponse(data: any, testNumber: number): DNSServer[] {
+  private static parseDNSResponse(data: any, testNumber: number, isIPv6: boolean = false): DNSServer[] {
     if (!data) {
       console.warn(`⚠️ No data received for test ${testNumber}`);
       return [];
@@ -153,7 +106,7 @@ export class DNSLeakTestService {
         
         const server: DNSServer = {
           ip: ip,
-          hostname: `dns-${testNumber}-${ip.replace(/\./g, '-')}`,
+          hostname: `${isIPv6 ? 'ipv6' : 'ipv4'}-dns-${testNumber}-${ip.replace(/[\.:]/g, '-')}`,
           country: country,
           isp: org,
           type: 'resolver',
@@ -161,13 +114,13 @@ export class DNSLeakTestService {
           asn: `AS${Math.floor(Math.random() * 90000) + 10000}`,
           org: org,
           responseTime: Math.floor(Math.random() * 100) + 10,
-          protocol: 'UDP',
+          protocol: isIPv6 ? 'UDP6' : 'UDP',
           port: 53,
           reliability: Math.random() > 0.7 ? 'high' : Math.random() > 0.4 ? 'medium' : 'low'
         };
         
         servers.push(server);
-        console.log(`✅ Parsed server from test ${testNumber}:`, server);
+        console.log(`✅ Parsed server from test ${testNumber} (${isIPv6 ? 'IPv6' : 'IPv4'}):`, server);
       }
     });
 
@@ -176,35 +129,44 @@ export class DNSLeakTestService {
 
   static async performDNSLeakTest(userIP?: string, onServerDetected?: (server: DNSServer) => void): Promise<DNSLeakTestResult> {
     console.log('🚀 Starting DNS leak test with browserleaks.org API...');
-    console.log('🔧 Using no-cors mode to handle CORS restrictions...');
+    console.log('📋 Running 4 tests total: 2 IPv4 + 2 IPv6');
     
     const startTime = Date.now();
     const servers: DNSServer[] = [];
     
     try {
-      // Facem 10 teste cu intervaluri de 1 secundă
-      for (let i = 1; i <= 10; i++) {
-        console.log(`📡 DNS Test ${i}/10 - Generating new random subdomain...`);
+      // Facem 2 teste IPv4 și 2 teste IPv6
+      const tests = [
+        { isIPv6: false, testNum: 1 },
+        { isIPv6: false, testNum: 2 },
+        { isIPv6: true, testNum: 3 },
+        { isIPv6: true, testNum: 4 }
+      ];
+
+      for (const test of tests) {
+        console.log(`📡 DNS Test ${test.testNum}/4 (${test.isIPv6 ? 'IPv6' : 'IPv4'}) - Generating new random subdomain...`);
         
         // Facem request-ul DNS cu un nou subdomain random
-        const dnsData = await this.fetchDNSData(i);
+        const dnsData = await this.fetchDNSData(test.testNum, test.isIPv6);
         
         if (dnsData) {
-          const detectedServers = this.parseDNSResponse(dnsData, i);
+          const detectedServers = this.parseDNSResponse(dnsData, test.testNum, test.isIPv6);
           
           detectedServers.forEach(server => {
             servers.push(server);
-            console.log(`✅ Server ${i} detected:`, server);
+            console.log(`✅ Server ${test.testNum} detected:`, server);
             
             // Apelăm callback-ul pentru update în timp real
             if (onServerDetected) {
               onServerDetected(server);
             }
           });
+        } else {
+          console.warn(`⚠️ No data received from API for test ${test.testNum}`);
         }
         
         // Așteptăm 1 secundă înainte de următorul request (doar dacă nu e ultimul)
-        if (i < 10) {
+        if (test.testNum < 4) {
           console.log('⏳ Waiting 1 second before next request...');
           await this.delay(1000);
         }
