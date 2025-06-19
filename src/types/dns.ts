@@ -39,6 +39,10 @@ export interface DNSLeakTestResult {
     cloudflare: DNSServer[];
     quad9: DNSServer[];
     google: DNSServer[];
+    local: DNSServer[];
+    public: DNSServer[];
+    isp: DNSServer[];
+    international: DNSServer[];
   };
 }
 

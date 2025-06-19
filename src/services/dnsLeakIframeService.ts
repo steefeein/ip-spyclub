@@ -1,4 +1,3 @@
-
 import { DNSLeakTestResult, DNSServer } from '@/types/dns';
 
 export class DNSLeakIframeService {
